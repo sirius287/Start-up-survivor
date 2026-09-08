@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Judge / Admin Control Panel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body class="bg-slate-900 text-white p-6">
+  <div class="max-w-6xl mx-auto space-y-6">
+    <h1 class="text-3xl font-extrabold text-red-500">Judge Portal: Market Shock Controls ⚡</h1>
+
+    <!-- Shock Buttons -->
+    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+      <h2 class="text-xl font-bold mb-4">Trigger Market Event / Shock</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <button onclick="sendShock('TECH_BOOM')" class="bg-emerald-600 hover:bg-emerald-500 font-bold p-3 rounded">🚀 Tech Boom (+50% Demand)</button>
+        <button onclick="sendShock('RECESSION')" class="bg-red-600 hover:bg-red-500 font-bold p-3 rounded">📉 Recession (-30% Budget/Demand)</button>
+        <button onclick="sendShock('PRIVACY_SCANDAL')" class="bg-amber-600 hover:bg-amber-500 font-bold p-3 rounded">🔒 Data Privacy Scandal</button>
+        <button onclick="sendShock('NORMAL')" class="bg-blue-600 hover:bg-blue-500 font-bold p-3 rounded">⚖️ Reset Market to Normal</button>
+      </div>
+    </div>
+
+    <!-- Live Leaderboard -->
+    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+      <h2 class="text-xl font-bold mb-4">Live Startup Leaderboard</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-slate-300">
+          <thead class="border-b border-slate-700 text-xs text-slate-400 uppercase">
+            <tr>
+              <th class="p-2">Startup Name</th>
+              <th class="p-2">Category</th>
+              <th class="p-2">Price/Unit</th>
+              <th class="p-2">Capital ($)</th>
+              <th class="p-2">Revenue ($)</th>
+              <th class="p-2">Total Units Sold</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+
+    function sendShock(shockKey) {
+      socket.emit('trigger_shock', shockKey);
+    }
+
+    socket.on('admin_state_update', (state) => {
+      const tbody = document.getElementById('leaderboard');
+      tbody.innerHTML = '';
+
+      Object.values(state.startups).forEach((startup) => {
+        const row = `
+          <tr class="border-b border-slate-700/50">
+            <td class="p-2 font-bold text-white">${startup.name}</td>
+            <td class="p-2">${startup.category}</td>
+            <td class="p-2">$${startup.unitPrice}</td>
+            <td class="p-2 text-green-400">$${startup.budget.toFixed(2)}</td>
+            <td class="p-2 text-indigo-400">$${startup.revenue.toFixed(2)}</td>
+            <td class="p-2">${startup.totalUnitsSold}</td>
+          </tr>
+        `;
+        tbody.innerHTML += row;
+      });
+    });
+  </script>
+</body>
+</html>
