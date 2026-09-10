@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self';">
   <title>Startup Survivor 2026 — The Business Model Gauntlet</title>
   <meta name="description" content="Teams don't pitch — they survive. Real-time market shocks, forced pivots, and one VC panel to win over. Welcome to the 2026 Gauntlet.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -602,6 +602,11 @@
               placeholder="e.g. PayZap, MediSync, GreenGrid…" autocomplete="off" data-sanitize="text">
           </div>
           <div class="form-group">
+            <label class="form-label" for="teamPasswordInput">Team Password <span class="text-red">*</span></label>
+            <input class="form-input" type="password" id="teamPasswordInput" minlength="8" required
+              placeholder="At least 8 characters" autocomplete="new-password">
+          </div>
+          <div class="form-group">
             <label class="form-label" for="categorySelect">Industry Sector <span class="text-red">*</span></label>
             <select class="form-input form-select" id="categorySelect" required>
               <option value="" disabled selected>Choose your battleground…</option>
@@ -673,7 +678,7 @@
           <button class="btn btn-purple btn-full mag-btn btn-large-bold" type="submit" id="judgeSubmitBtn">
             Access Command Bunker
           </button>
-          <p class="modal-note">Default: <code class="code-hint">gauntlet2026</code></p>
+          <p class="modal-note">Use the judge passphrase configured on the server.</p>
         </div>
       </form>
     </div>
@@ -965,8 +970,16 @@
       btn.disabled = true;
       btn.innerHTML = '<div class="spinner"></div> Entering arena…';
       await sleep(700);
-      SS.loginTeam({ teamName, startupName, category, tagline });
-      window.location.href = 'dashboard.html';
+      const password = document.getElementById('teamPasswordInput')?.value || '';
+      if (password.length < 8) { showErr(errEl, 'Team password must be at least 8 characters.'); btn.disabled = false; return; }
+      try {
+        await SS.loginTeam({ teamName, startupName, category, tagline, password });
+        window.location.href = 'dashboard.html';
+      } catch (error) {
+        showErr(errEl, error.message);
+        btn.disabled = false;
+        btn.innerHTML = 'Enter the Gauntlet';
+      }
     });
 
     document.getElementById('judgeLoginForm')?.addEventListener('submit', async e => {
@@ -989,17 +1002,16 @@
       btn.innerHTML = '<div class="spinner"></div> Verifying…';
 
       await sleep(450);
-      const ok = SS.loginJudge(pw);
-      const data = RateLimit.increment();
-      const remaining = RateLimit.max - data.count;
-
-      if (ok) {
+      try {
+        await SS.loginJudge(pw);
         window.location.href = 'admin.html';
-      } else {
+      } catch (error) {
+        const data = RateLimit.increment();
+        const remaining = RateLimit.max - data.count;
         lockEl?.classList.add('hidden');
         showErr(errEl, remaining <= 0
           ? 'Too many failed attempts. Locked for 60 seconds.'
-          : `Incorrect passphrase. ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining.`);
+          : `${error.message} ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining.`);
         btn.disabled = false;
         btn.innerHTML = 'Access Command Bunker';
       }

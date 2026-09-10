@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   renderUserHeader();
   renderBMC();
-  syncFromState();
+  SS.refresh().then(syncFromState).catch(error => Toast.error('Unable to load game', error.message));
   startPolling();
   setupControls();
   setupBMCEditing();
@@ -34,15 +34,16 @@ function categoryBadgeClass(cat) {
 }
 
 /* ── Full state sync (called on poll) ── */
-function syncFromState() {
+async function syncFromState() {
+  if (!_lastState) await SS.refresh();
   const state = SS.load();
   _lastState  = state;
+  renderBMC();
 
   const ms = state.marketState[_user.id];
   if (!ms) return;
 
   // Prune expired shocks
-  Shocks.pruneExpired();
   const myShocks = Shocks.getForTeam(_user.id, state.activeShocks);
 
   updateMetricCards(ms);
@@ -336,7 +337,7 @@ function setupControls() {
   if (deployBtn) deployBtn.addEventListener('click', deployStrategy);
 }
 
-function deployStrategy() {
+async function deployStrategy() {
   const btn = document.getElementById('deployBtn');
   if (btn.disabled) return;
 
@@ -358,29 +359,15 @@ function deployStrategy() {
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner"></div> Simulating…';
 
-  setTimeout(() => {
-    SS.patch(state => {
-      const ms = state.marketState[_user.id];
-      if (!ms) return;
-
-      ms.productPrice   = price;
-      ms.marketingSpend = mktSpend;
-      ms.targetSegment  = segment;
-
-      const myShocks = Shocks.getForTeam(_user.id, state.activeShocks);
-      const updated  = Market.runTick(ms, myShocks);
-      state.marketState[_user.id] = updated;
-    });
-
+  try {
+    await SS.request(`/api/teams/${_user.id}/deploy`, { method: 'POST', body: JSON.stringify({ productPrice: price, marketingSpend: mktSpend, targetSegment: segment }) });
+    await SS.refresh();
     syncFromState();
-    Toast.success('Strategy Deployed!', `Tick ${_lastState?.marketState[_user.id]?.tick || '?'} complete — check your metrics.`);
-
-    btn.disabled = false;
-    btn.innerHTML = '<span>🚀</span> Deploy Strategy';
-
-    // Float-up animation on revenue card
+    Toast.success('Strategy Deployed!', `Tick ${SS.load().marketState[_user.id]?.tick || '?'} complete — check your metrics.`);
     floatEffect(document.getElementById('metRevenue'));
-  }, 900);
+  } catch (error) { Toast.error('Deployment failed', error.message); }
+  btn.disabled = false;
+  btn.innerHTML = '<span>🚀</span> Deploy Strategy';
 }
 
 function floatEffect(el) {
@@ -481,15 +468,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (modal) modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('active'); });
 });
 
-function saveBMC() {
+async function saveBMC() {
   const input = document.getElementById('bmcInput');
   const field = input?.dataset.field;
   if (!field) return;
 
-  SS.patch(state => {
-    const ms = state.marketState[_user.id];
-    if (ms) ms.bmc[field] = input.value;
-  });
+  try { await SS.request(`/api/teams/${_user.id}/bmc`, { method: 'PATCH', body: JSON.stringify({ field, value: input.value }) }); await SS.refresh(); }
+  catch (error) { Toast.error('BMC update failed', error.message); return; }
 
   renderBMC();
   document.getElementById('bmcModal')?.classList.remove('active');
@@ -505,7 +490,6 @@ function startPolling() {
 function setupLogout() {
   const btn = document.getElementById('logoutBtn');
   if (btn) btn.addEventListener('click', () => {
-    SS.clearCurrentUser();
-    window.location.href = 'index.html';
+    SS.logout().then(() => { window.location.href = 'index.html'; });
   });
 }

@@ -1,3 +1,2 @@
-# There are no backend python dependencies required for this Vanilla JS/HTML/CSS project.
-# You can run the project using Python's built in HTTP server:
-# python3 -m http.server 8000
+# Backend dependencies are managed by npm. This file is retained for environments
+# that discover project metadata through requirements files; use `npm install`.

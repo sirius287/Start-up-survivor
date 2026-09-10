@@ -130,67 +130,17 @@ const Shocks = {
 
   /* ── Apply a shock globally ── */
   deployShock(shockId, targetTeamId = null) {
-    const shock = this.CATALOG.find(s => s.id === shockId);
-    if (!shock) return null;
-
-    SS.patch(state => {
-      // Remove same shock if already active (replace)
-      state.activeShocks = state.activeShocks.filter(s => s.id !== shockId);
-
-      const entry = {
-        ...shock,
-        deployedAt: Date.now(),
-        expiresAt:  Date.now() + shock.duration * 60000, // 1 tick ≈ 1 min for real-time feel
-        targetTeamId: targetTeamId || null,
-        deployedBy: 'judge',
-        instanceId: shockId + '_' + Date.now(),
-      };
-
-      state.activeShocks.push(entry);
-      state.shockHistory.unshift({ ...entry, resolved: false });
-    });
-
-    return shock;
+    return this.CATALOG.find(s => s.id === shockId) || null;
   },
 
   /* ── Deploy a custom shock ── */
   deployCustomShock({ name, description, demandDelta, budgetDelta, conversionDelta, durationMins, targetTeamId }) {
-    SS.patch(state => {
-      const entry = {
-        id: 'custom_' + Date.now(),
-        name,
-        emoji: '⚡',
-        description,
-        category: 'custom',
-        severity: 'high',
-        effect: {
-          demand:     parseFloat(demandDelta)     || 0,
-          budget:     parseFloat(budgetDelta)     || 0,
-          conversion: parseFloat(conversionDelta) || 0,
-        },
-        duration: parseInt(durationMins) || 2,
-        deployedAt: Date.now(),
-        expiresAt: Date.now() + (parseInt(durationMins) || 2) * 60000,
-        targetTeamId: targetTeamId || null,
-        deployedBy: 'judge',
-        instanceId: 'custom_' + Date.now(),
-      };
-      state.activeShocks.push(entry);
-      state.shockHistory.unshift({ ...entry, resolved: false });
-    });
+    return SS.request('/api/shocks/custom', { method: 'POST', body: JSON.stringify({ name, description, demandDelta, budgetDelta, conversionDelta, durationMins, targetTeamId }) });
   },
 
   /* ── Expire old shocks ── */
   pruneExpired() {
-    SS.patch(state => {
-      const now = Date.now();
-      const expired = state.activeShocks.filter(s => s.expiresAt <= now);
-      state.activeShocks = state.activeShocks.filter(s => s.expiresAt > now);
-      expired.forEach(s => {
-        const hist = state.shockHistory.find(h => h.instanceId === s.instanceId);
-        if (hist) hist.resolved = true;
-      });
-    });
+    return Promise.resolve();
   },
 
   /* ── Get shocks relevant to a specific team ── */

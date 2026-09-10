@@ -1,0 +1,27 @@
+{
+  "name": "startup-survivor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "Server-authoritative Startup Survivor game",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node --watch server/server.js",
+    "test": "node --check server/server.js && node --check server/services/market.js && node --check server/services/shocks.js && node --check server/services/state.js && node --check js/app.js && node --check js/dashboard.js && node --check js/admin.js && node --check js/shocks.js"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.4.1",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.1"
+  },
+  "overrides": {
+    "qs": "^6.16.0"
+  }
+}

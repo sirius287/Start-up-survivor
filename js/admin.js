@@ -9,8 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   _adminUser = requireAuth('judge');
   if (!_adminUser) return;
 
-  _adminState = SS.load();
-  renderAll();
+  SS.refresh().then(() => { _adminState = SS.load(); renderAll(); }).catch(error => Toast.error('Unable to load command center', error.message));
   renderShockArsenal();
   setupGameControls();
   setupCustomShock();
@@ -166,11 +165,9 @@ setInterval(() => {
 }, 1000);
 
 function removeShock(instanceId) {
-  SS.patch(state => {
-    state.activeShocks = state.activeShocks.filter(s => s.instanceId !== instanceId);
-  });
-  Toast.info('Shock Removed', 'Teams will feel the relief on their next tick.');
-  renderAll();
+  SS.request(`/api/shocks/${encodeURIComponent(instanceId)}`, { method: 'DELETE' })
+    .then(() => SS.refresh()).then(() => { Toast.info('Shock Removed', 'Teams will feel the relief on their next tick.'); renderAll(); })
+    .catch(error => Toast.error('Unable to remove shock', error.message));
 }
 
 /* ── Shock Arsenal ── */
@@ -209,12 +206,11 @@ function renderShockArsenal() {
 }
 
 /* ── Deploy shock ── */
-function deployShock(shockId, teamId = null) {
+async function deployShock(shockId, teamId = null) {
   const shock = Shocks.deployShock(shockId, teamId);
   if (!shock) return;
-  const target = teamId ? `→ Team` : '→ All Teams';
-  Toast.shock(`⚡ ${shock.name} Deployed`, `${target} • Duration: ${shock.duration} ticks`);
-  renderAll();
+  try { await SS.request('/api/shocks/deploy', { method: 'POST', body: JSON.stringify({ shockId, targetTeamId: teamId }) }); await SS.refresh(); const target = teamId ? '→ Team' : '→ All Teams'; Toast.shock(`⚡ ${shock.name} Deployed`, `${target} • Duration: ${shock.duration} ticks`); renderAll(); }
+  catch (error) { Toast.error('Shock deployment failed', error.message); }
 }
 
 /* ── Target modal ── */
@@ -252,7 +248,7 @@ function setupGameControls() {
     pauseGame:  () => setPhase('paused'),
     resumeGame: () => setPhase('active'),
     endGame:    () => { if (confirm('End the game? All teams will see a "Game Over" screen.')) setPhase('ended'); },
-    resetGame:  () => { if (confirm('RESET everything? This clears all team data and scores!')) { SS.resetAll(); window.location.reload(); } },
+    resetGame:  () => { if (confirm('RESET everything? This clears all team data and scores!')) { SS.request('/api/game/reset', { method: 'POST' }).then(() => window.location.reload()).catch(error => Toast.error('Reset failed', error.message)); } },
   };
   Object.entries(actions).forEach(([id, fn]) => {
     document.getElementById(id)?.addEventListener('click', fn);
@@ -260,13 +256,8 @@ function setupGameControls() {
 }
 
 function setPhase(phase) {
-  SS.patch(state => {
-    state.gamePhase = phase;
-    if (phase === 'active' && !state.gameStartTime) state.gameStartTime = Date.now();
-    if (phase === 'ended') state.gameTick = Math.max(...Object.values(state.marketState || {}).map(m=>m.tick||0), 0);
-  });
-  Toast.info(`Phase: ${phase.toUpperCase()}`, phase === 'active' ? 'Simulation is now LIVE!' : phase === 'ended' ? 'Game Over — check the leaderboard!' : '');
-  renderAll();
+  const action = phase === 'active' ? (_adminState.gamePhase === 'paused' ? 'resume' : 'start') : phase === 'ended' ? 'end' : 'pause';
+  SS.request(`/api/game/${action}`, { method: 'POST' }).then(() => SS.refresh()).then(() => { Toast.info(`Phase: ${phase.toUpperCase()}`, phase === 'active' ? 'Simulation is now LIVE!' : phase === 'ended' ? 'Game Over — check the leaderboard!' : ''); renderAll(); }).catch(error => Toast.error('Game control failed', error.message));
 }
 
 function renderGamePhaseUI(phase) {
@@ -297,10 +288,7 @@ function setupCustomShock() {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(form));
     if (!data.name) { Toast.error('Missing name', 'Please give the shock a name.'); return; }
-    Shocks.deployCustomShock({ ...data, targetTeamId: null });
-    Toast.shock(`⚡ Custom Shock: ${data.name}`, 'Deployed to all teams.');
-    form.reset();
-    renderAll();
+    Shocks.deployCustomShock({ ...data, targetTeamId: null }).then(() => SS.refresh()).then(() => { Toast.shock(`⚡ Custom Shock: ${data.name}`, 'Deployed to all teams.'); form.reset(); renderAll(); }).catch(error => Toast.error('Custom shock failed', error.message));
   });
 }
 
@@ -313,7 +301,6 @@ function catBadge(cat) {
 /* ── Logout ── */
 function setupLogout() {
   document.getElementById('logoutBtn')?.addEventListener('click', () => {
-    SS.clearCurrentUser();
-    window.location.href = 'index.html';
+    SS.logout().then(() => { window.location.href = 'index.html'; });
   });
 }

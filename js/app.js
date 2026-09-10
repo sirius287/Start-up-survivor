@@ -3,48 +3,16 @@
    ============================================================ */
 
 const SS = {
-  STORE_KEY: 'startupSurvivor_v2',
-  JUDGE_PASSWORD: 'gauntlet2026',
   POLL_INTERVAL: 1500,  // ms between state sync polls
-
-  /* ── Initial State ── */
-  defaultState() {
-    return {
-      teams: [],
-      marketState: {},       // keyed by teamId
-      activeShocks: [],      // global shocks active right now
-      shockHistory: [],
-      gamePhase: 'lobby',    // lobby | active | paused | ended
-      gameStartTime: null,
-      gameTick: 0,
-      leaderboard: [],
-      lastUpdate: Date.now(),
-    };
-  },
-
-  /* ── Storage Helpers ── */
-  load() {
-    try {
-      const raw = localStorage.getItem(this.STORE_KEY);
-      if (!raw) return this.defaultState();
-      return { ...this.defaultState(), ...JSON.parse(raw) };
-    } catch (e) {
-      return this.defaultState();
-    }
-  },
-
-  save(state) {
-    state.lastUpdate = Date.now();
-    localStorage.setItem(this.STORE_KEY, JSON.stringify(state));
-  },
-
-  get() { return this.load(); },
-
-  patch(updater) {
-    const state = this.load();
-    updater(state);
-    this.save(state);
-    return state;
+  _state: null,
+  _defaultState() { return { teams: [], marketState: {}, activeShocks: [], shockHistory: [], gamePhase: 'lobby', gameStartTime: null, gameTick: 0, leaderboard: [], lastUpdate: 0 }; },
+  load() { return this._state || this._defaultState(); },
+  async refresh() { const response = await this.request('/api/game/state'); this._state = response; return response; },
+  async request(url, options = {}) {
+    const response = await fetch(url, { credentials: 'same-origin', headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || body.success === false) throw new Error(body.error?.message || 'Request failed.');
+    return body.data;
   },
 
   /* ── Auth ── */
@@ -63,48 +31,24 @@ const SS = {
     sessionStorage.removeItem(this.CURRENT_KEY);
   },
 
-  loginTeam({ teamName, startupName, category, tagline }) {
-    const state = this.load();
-    const teamId = 'team_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
-
-    const team = {
-      id: teamId,
-      teamName,
-      startupName,
-      category,
-      tagline,
-      joinedAt: Date.now(),
-      isActive: true,
-    };
-
-    // Check if team name already exists, reassign
-    const existing = state.teams.find(t => t.teamName.toLowerCase() === teamName.toLowerCase());
-    if (existing) {
-      // Re-login existing team
-      this.setCurrentUser({ ...existing, role: 'team' });
-      return existing;
-    }
-
-    state.teams.push(team);
-
-    // Init market state for this team
-    state.marketState[teamId] = Market.initTeamState(category);
-
-    this.save(state);
-    this.setCurrentUser({ ...team, role: 'team' });
-    return team;
+  async loginTeam(details) {
+    const data = await this.request('/api/auth/team/register', { method: 'POST', body: JSON.stringify(details) });
+    const user = { ...data.team, id: String(data.teamId), role: 'team' };
+    this.setCurrentUser(user);
+    return user;
   },
 
-  loginJudge(password) {
-    if (password !== this.JUDGE_PASSWORD) return false;
-    this.setCurrentUser({ role: 'judge', name: 'Game Master' });
-    return true;
+  async loginJudge(password) {
+    const user = await this.request('/api/auth/judge/login', { method: 'POST', body: JSON.stringify({ password }) });
+    this.setCurrentUser(user);
+    return user;
   },
 
   /* ── Reset ── */
-  resetAll() {
-    localStorage.removeItem(this.STORE_KEY);
-    sessionStorage.removeItem(this.CURRENT_KEY);
+  async logout() {
+    await this.request('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    this.clearCurrentUser();
+    this._state = null;
   },
 };
 
@@ -173,13 +117,12 @@ const Poller = {
   start(cb, interval = SS.POLL_INTERVAL) {
     if (cb) this._callbacks.push(cb);
     if (this._interval) return;
-    this._interval = setInterval(() => {
-      const state = SS.load();
-      if (state.lastUpdate !== this._lastUpdate) {
-        this._lastUpdate = state.lastUpdate;
-        this._callbacks.forEach(fn => fn(state));
-      }
-    }, interval);
+    const poll = async () => {
+      try { const state = await SS.refresh(); this._lastUpdate = state.lastUpdate; this._callbacks.forEach(fn => fn(state)); }
+      catch (error) { if (error.message.includes('session')) { SS.clearCurrentUser(); window.location.href = 'index.html'; } }
+    };
+    poll();
+    this._interval = setInterval(poll, interval);
   },
 
   stop() {
