@@ -461,8 +461,6 @@ const Effects = (() => {
      PUBLIC INIT
   ───────────────────────────────────────────── */
   function init() {
-    initCursor();
-    initTrail();
     initMagnetic();
     initReveal();
     initScrollProgress();

@@ -3,7 +3,7 @@
    Custom Cursor · Scroll Reveal · Parallax · Micro-interactions
    ============================================================ */
 
-/* ── Custom Cursor ── */
+/* ── Custom Cursor (disabled — native cursor kept for usability) ── */
 #ss-cursor {
   position: fixed;
   width: 12px;

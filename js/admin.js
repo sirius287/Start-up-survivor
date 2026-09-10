@@ -189,8 +189,8 @@ function renderShockArsenal() {
           <span class="effect-pill-sm" style="color:var(--text-muted)">⏱ ${shock.duration} ticks</span>
         </div>
         <div class="sca-actions">
-          <button class="btn btn-danger btn-sm" onclick="deployShock('${shock.id}', null)">⚡ Deploy All</button>
-          <button class="btn btn-ghost btn-sm" onclick="openTargetModal('${shock.id}')">🎯 Target Team</button>
+          <button class="btn btn-danger btn-sm" onclick="deployShock('${shock.id}', null)">Deploy All</button>
+          <button class="btn btn-ghost btn-sm" onclick="openTargetModal('${shock.id}')">Target Team</button>
         </div>
       </div>`;
   }).join('');
