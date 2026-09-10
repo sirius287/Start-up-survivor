@@ -27,7 +27,8 @@ export default function Landing({ nav }) {
   useEffect(() => {
     const u = getCurrentUser();
     if (u?.role === 'team') nav('/dashboard');
-    else if (u?.role === 'judge') nav('/admin');
+    else if (u?.role === 'judge') nav('/staff');
+    else if (u?.role === 'admin') nav('/admin');
   }, [nav]);
 
   useEffect(() => {
@@ -55,7 +56,6 @@ export default function Landing({ nav }) {
         <div className="hero-ctas">
           <button className="btn btn-primary" onClick={() => setModal('register')}>⚔ Register Squad</button>
           <button className="btn btn-ghost" onClick={() => setModal('login')}>🔑 Team Login</button>
-          <button className="btn btn-dark" onClick={() => setModal('judge')}>⚖ Judge Panel</button>
         </div>
         <div className="stat-strip">
           <div><span className="n">{teams.length}</span><span className="l">Contenders</span></div>
@@ -116,7 +116,6 @@ export default function Landing({ nav }) {
 
       {modal === 'register' && <RegisterModal nav={nav} toast={toast} switchTo={() => setModal('login')} close={() => setModal(null)} />}
       {modal === 'login' && <LoginModal nav={nav} toast={toast} switchTo={() => setModal('register')} close={() => setModal(null)} />}
-      {modal === 'judge' && <JudgeModal nav={nav} toast={toast} close={() => setModal(null)} />}
       <Toasts items={items} />
     </div>
   );
@@ -217,36 +216,3 @@ function LoginModal({ nav, toast, switchTo, close }) {
   );
 }
 
-function JudgeModal({ nav, toast, close }) {
-  const [password, setPassword] = useState('');
-  const [err, setErr] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setErr('');
-    if (!password) return setErr('Enter the access passphrase.');
-    setBusy(true);
-    try {
-      await api.loginJudge(password);
-      nav('/admin');
-    } catch (ex) {
-      setErr(ex.message);
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Modal title="Judge <em>bunker</em>" onClose={close}>
-      <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>Deploy shocks. Watch teams scramble. Decide who survives.</p>
-      <form onSubmit={submit}>
-        <div className="field"><label className="label" htmlFor="jg-pass">Access Passphrase <span className="req">*</span></label>
-          <Password id="jg-pass" value={password} onChange={setPassword} placeholder="Enter judge passphrase" autoComplete="current-password" /></div>
-        {err && <p className="form-error">{err}</p>}
-        <button className="btn btn-primary btn-full" type="submit" disabled={busy}>
-          {busy && <span className="spinner" />} Access Command Bunker
-        </button>
-      </form>
-    </Modal>
-  );
-}

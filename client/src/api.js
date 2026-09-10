@@ -50,8 +50,21 @@ export const api = {
     setCurrentUser(user);
     return user;
   },
+  // Judges log in with a short code (no password) — as many judges as there
+  // are JUDGE_<n>_CODE entries in the server env.
+  loginJudgeCode: async (code) => {
+    const user = await request('/api/auth/judge/login', { method: 'POST', body: JSON.stringify({ code }) });
+    setCurrentUser(user);
+    return user;
+  },
   loginJudge: async (password) => {
-    const user = await request('/api/auth/judge/login', { method: 'POST', body: JSON.stringify({ password }) });
+    // NOTE: this "judge bunker" screen is actually the Game Master / admin
+    // console (start/pause/shocks/reset) — real judges now log in with a
+    // short code, not a password, via a separate (not-yet-built) judge
+    // panel. Wired to /api/auth/admin/login as an interim bridge so this
+    // existing control room keeps working under the new admin/judge role
+    // split. See PLAN.md §2 / REDESIGN.md §C.3.
+    const user = await request('/api/auth/admin/login', { method: 'POST', body: JSON.stringify({ password }) });
     setCurrentUser(user);
     return user;
   },
@@ -63,10 +76,18 @@ export const api = {
   gameState: () => request('/api/game/state'),
   leaderboard: () => request('/api/leaderboard'),
   catalog: () => request('/api/shocks'),
-  deploy: (teamId, strategy) =>
-    request(`/api/teams/${teamId}/deploy`, { method: 'POST', body: JSON.stringify(strategy) }),
-  saveBmc: (teamId, field, value) =>
-    request(`/api/teams/${teamId}/bmc`, { method: 'PATCH', body: JSON.stringify({ field, value }) }),
+  // Two-step: submit a request (strategy + cited doc), then — once a judge
+  // approves it — deploy. `deploy` takes no body; the approved request IS
+  // the payload, so a team can never deploy numbers nobody approved.
+  submitRequest: (teamId, payload) =>
+    request(`/api/teams/${teamId}/strategy`, { method: 'POST', body: JSON.stringify(payload) }),
+  myRequest: (teamId) => request(`/api/teams/${teamId}/request`),
+  deploy: (teamId) => request(`/api/teams/${teamId}/deploy`, { method: 'POST' }),
+  // Documents & links (deck, idea brief, GTM, financial model, etc.)
+  docTypes: () => request('/api/docs/types'),
+  myDocs: () => request('/api/docs/mine'),
+  submitDoc: (teamId, docType, docUrl) =>
+    request(`/api/teams/${teamId}/docs/${docType}`, { method: 'POST', body: JSON.stringify({ docUrl }) }),
   teamStats: (teamId) => request(`/api/teams/${teamId}/stats`),
   deployments: (teamId, limit = 50) =>
     request(`/api/deployments?limit=${limit}${teamId ? `&teamId=${teamId}` : ''}`),
@@ -81,6 +102,33 @@ export const api = {
   allQuality: () => request('/api/quality'),
   scoreQuality: (teamId, scores) =>
     request(`/api/quality/${teamId}`, { method: 'POST', body: JSON.stringify({ scores }) }),
+  // staff: doc review queue
+  docQueue: () => request('/api/docs/queue'),
+  addDocComment: (id, payload) =>
+    request(`/api/docs/${id}/comments`, { method: 'POST', body: JSON.stringify(payload) }),
+  claimDoc: (id) => request(`/api/docs/${id}/claim`, { method: 'POST' }),
+  decideDoc: (id, decision, reason, opts = {}) =>
+    request(`/api/docs/${id}/decide`, { method: 'POST', body: JSON.stringify({ decision, reason, ...opts }) }),
+  powers: () => request('/api/powers'),
+  grantPower: () => request('/api/events/power', { method: 'POST' }),
+  fireGlobalEvent: (shockId) => request('/api/events/global', { method: 'POST', body: JSON.stringify({ shockId }) }),
+  clearShock: (instanceId) => request(`/api/shocks/${instanceId}`, { method: 'DELETE' }),
+  eventLog: ({ kind, teamId, limit = 200 } = {}) => {
+    const q = new URLSearchParams({ limit: String(limit) });
+    if (kind) q.set('kind', kind);
+    if (teamId) q.set('teamId', teamId);
+    return request(`/api/event-log?${q}`);
+  },
+  results: () => request('/api/results'),
+  setResultWeights: (market, docs) => request('/api/results/weights', { method: 'POST', body: JSON.stringify({ market, docs }) }),
+  freezeResults: () => request('/api/results/freeze', { method: 'POST' }),
+  halftimeCutPreview: () => request('/api/game/halftime-cut/preview'),
+  // admin: engine + schedule
+  runTick: () => request('/api/engine/tick', { method: 'POST' }),
+  advanceRound: () => request('/api/game/round/advance', { method: 'POST' }),
+  extendDeadline: (minutes) => request('/api/game/extend', { method: 'POST', body: JSON.stringify({ minutes }) }),
+  fireHalftimeShock: (shockId) =>
+    request('/api/game/halftime-shock', { method: 'POST', body: JSON.stringify({ shockId }) }),
 };
 
 export const CATEGORIES = ['FinTech', 'HealthTech', 'EdTech', 'AgriTech', 'CleanTech', 'RetailTech'];
@@ -90,17 +138,24 @@ export const SEGMENT_INFO = {
   premium: { label: 'Premium', hint: 'Smaller pool but 40% better conversion. Great for crisis resilience.' },
   niche: { label: 'Niche', hint: 'Ultra-targeted. 80% better CVR. Low volume but extremely high signal quality.' },
 };
-export const BMC_FIELDS = [
-  ['keyPartners', 'Key Partners'],
-  ['keyActivities', 'Key Activities'],
-  ['keyResources', 'Key Resources'],
-  ['valueProposition', 'Value Proposition'],
-  ['customerRelationships', 'Customer Relationships'],
-  ['channels', 'Channels'],
-  ['customerSegments', 'Customer Segments'],
-  ['costStructure', 'Cost Structure'],
-  ['revenueStreams', 'Revenue Streams'],
-];
+/* Human labels for submission states, so the team panel never shows a
+   bare enum. */
+export const DOC_STATUS = {
+  submitted:     { label: 'Awaiting review', tone: 'amber' },
+  under_review:  { label: 'Judge reviewing', tone: 'amber' },
+  approved:      { label: 'Approved',        tone: 'green' },
+  rejected:      { label: 'Rejected',        tone: 'red'   },
+  carried_over:  { label: 'Not reviewed in time — carried over', tone: 'amber' },
+  auto_approved: { label: 'Auto-approved at deadline', tone: 'green' },
+};
+
+/** mm:ss countdown against a server-provided deadline. */
+export function countdown(deadlineMs, nowMs = Date.now()) {
+  const left = Math.max(0, (deadlineMs || 0) - nowMs);
+  const m = Math.floor(left / 60000);
+  const s = Math.floor((left % 60000) / 1000);
+  return { expired: left <= 0, ms: left, text: `${m}:${String(s).padStart(2, '0')}` };
+}
 
 export const fmt = {
   currency(n, compact = false) {

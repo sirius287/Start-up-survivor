@@ -10,9 +10,13 @@
     "dev": "node --watch server/server.js",
     "build:client": "npm run build --prefix client",
     "dev:client": "npm run dev --prefix client",
-    "test": "node --check api/index.js && node --check server/server.js && node --check server/services/market.js && node --check server/services/shocks.js && node --check server/services/state.js && node --check js/app.js && node --check js/dashboard.js && node --check js/admin.js && node --check js/shocks.js"
+    "test": "node --check api/index.js && node --check server/server.js && node --check server/services/market.js && node --check server/services/docs.js && node --check server/services/judges.js && node --check server/services/rng.js && node --check server/services/eventLog.js",
+    "test:e2e": "node scripts/e2e-test.mjs",
+    "simulate": "node scripts/simulate-event.mjs"
   },
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.6",
