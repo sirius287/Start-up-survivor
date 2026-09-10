@@ -100,11 +100,23 @@
 .admin-col-right {
   position: sticky;
   top: 120px;
-  max-height: calc(100vh - 120px);
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+/* ── Scrollable panels (leaderboard, shock log, quality) ── */
+.admin-panel-scrollable {
+  max-height: calc(100vh - 170px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.12) transparent;
+}
+.admin-panel-scrollable::-webkit-scrollbar { width: 6px; }
+.admin-panel-scrollable::-webkit-scrollbar-track { background: transparent; }
+.admin-panel-scrollable::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.14);
+  border-radius: 3px;
 }
 
 /* ── Admin Panel — flatter, quieter ── */
