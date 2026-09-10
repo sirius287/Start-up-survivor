@@ -19,6 +19,7 @@ export default function Admin({ nav }) {
   const [targeting, setTargeting] = useState(null); // shockId to deploy with target
   const [scoring, setScoring] = useState(null); // teamId being scored
   const [detail, setDetail] = useState(null); // team object for detail view
+  const [grading, setGrading] = useState(null);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') nav('/');
@@ -26,6 +27,15 @@ export default function Admin({ nav }) {
 
   useEffect(() => {
     api.catalog().then(setCatalog).catch(() => {});
+  }, []);
+
+  // The tick is gated on grading, so admin needs to see exactly what is
+  // outstanding rather than just being told "no".
+  useEffect(() => {
+    const load = () => api.gradingStatus().then(setGrading).catch(() => {});
+    load();
+    const id = setInterval(load, 4000);
+    return () => clearInterval(id);
   }, []);
 
   const fetchState = useCallback(() => api.gameState(), []);
@@ -74,6 +84,53 @@ export default function Admin({ nav }) {
             <button className="btn btn-dark btn-sm" disabled={phase !== 'active' && phase !== 'paused'} onClick={() => act(() => api.gameAction('end'), ['Session ended'], 'End failed')}>🏁 End</button>
             <button className="btn btn-danger btn-sm" onClick={() => { if (window.confirm('Wipe all teams and reset the arena?')) act(() => api.resetGame(), ['Arena reset'], 'Reset failed'); }}>🗑 Reset</button>
             <span className="muted mono" style={{ fontSize: 12, marginLeft: 'auto' }}>Tick {state?.gameTick ?? 0} · {teams.length} teams</span>
+          </div>
+        </div>
+
+        {/* Grading gate: the tick will not run on a half-graded field. */}
+        <div className="panel" style={{ borderColor: grading?.complete ? 'var(--green)' : 'var(--gold)' }}>
+          <div className="panel-h">
+            {grading?.complete ? '✅ Grading complete — tick can run' : '⏳ Waiting on grading'}
+            <span className="muted" style={{ textTransform: 'none', letterSpacing: 0, marginLeft: 8 }}>
+              round {grading?.round ?? '—'} · tick {grading?.tick ?? '—'} · {grading?.gradingMinutes ?? 25} min window
+            </span>
+          </div>
+          {!grading?.complete && (
+            <>
+              <p className="muted" style={{ marginTop: 0 }}>
+                <b>{grading?.undecided?.length ?? 0}</b> pricing decision(s) and{' '}
+                <b>{grading?.unrated?.length ?? 0}</b> unrated document(s) outstanding.
+                Results are computed from document points, so the tick stays locked until
+                judges finish.
+              </p>
+              <div className="log" style={{ maxHeight: 160 }}>
+                {(grading?.undecided || []).map(u => (
+                  <div key={`d${u.id}`} className="log-row">
+                    <span className="badge badge-red">decide</span>
+                    <span className="grow">{u.teamName} — {u.doc}</span>
+                  </div>
+                ))}
+                {(grading?.unrated || []).map(u => (
+                  <div key={`r${u.id}`} className="log-row">
+                    <span className="badge badge-amber">rate</span>
+                    <span className="grow">{u.teamName} — {u.doc}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+          <div className="row" style={{ marginTop: 12 }}>
+            <button className="btn btn-primary btn-sm" disabled={phase !== 'active'}
+              onClick={() => act(() => api.runTick(false), ['Tick complete'], 'Tick blocked')}>
+              ▶ Run tick
+            </button>
+            <button className="btn btn-danger btn-sm" disabled={phase !== 'active' || grading?.complete}
+              onClick={() => {
+                if (window.confirm(`Force the tick with ${grading?.total ?? 0} item(s) still ungraded? This is logged.`))
+                  act(() => api.runTick(true), ['Tick FORCED'], 'Force failed');
+              }}>
+              ⚠ Force tick (judge unavailable)
+            </button>
           </div>
         </div>
 

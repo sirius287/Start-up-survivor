@@ -325,7 +325,19 @@ async function main() {
   expectOk('admin: custom shock', await req(admin, 'POST', '/api/shocks/custom', { name: 'Test Event', demandDelta: 10, budgetDelta: 0, conversionDelta: 5, durationMins: 2 }));
   expectCode('admin: invalid custom shock', await req(admin, 'POST', '/api/shocks/custom', { name: '', demandDelta: 99999 }), 'INVALID_SHOCK');
   expectCode('admin: unknown shock id', await req(admin, 'POST', '/api/shocks/deploy', { shockId: 'nope' }), 'INVALID_SHOCK');
-  expectOk('admin: engine tick', await req(admin, 'POST', '/api/engine/tick'));
+  head('GRADING GATE — the tick will not run on a half-graded field');
+  const gs = (await req(admin, 'GET', '/api/grading/status')).body?.data;
+  if (gs) ok(`grading status readable (${gs.total} outstanding, ${gs.gradingMinutes}min window)`); else bad('grading status', 'no data');
+  expectDenied('team cannot read grading status', await req(teamA, 'GET', '/api/grading/status'));
+  if (!gs?.complete) {
+    expectCode('tick blocked while grading incomplete', await req(admin, 'POST', '/api/engine/tick', { force: false }), 'GRADING_INCOMPLETE');
+    expectOk('admin can FORCE past it (no deadlock)', await req(admin, 'POST', '/api/engine/tick', { force: true }));
+  } else {
+    expectOk('admin: engine tick (grading was complete)', await req(admin, 'POST', '/api/engine/tick', { force: false }));
+  }
+  expectDenied('judge cannot force a tick', await req(judge1, 'POST', '/api/engine/tick', { force: true }));
+  expectOk('admin sets the grading window', await req(admin, 'POST', '/api/game/grading-window', { minutes: 25 }));
+  expectDenied('judge cannot set the grading window', await req(judge1, 'POST', '/api/game/grading-window', { minutes: 5 }));
   expectOk('admin: event log', await req(admin, 'GET', '/api/event-log'));
   expectOk('admin: event log CSV', await req(admin, 'GET', '/api/event-log/export.csv'));
   expectCode('team CANNOT read standings before release', await req(teamA, 'GET', '/api/results'), 'RESULTS_NOT_RELEASED');

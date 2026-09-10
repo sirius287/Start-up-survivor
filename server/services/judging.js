@@ -281,7 +281,48 @@ async function evaluateHalftimeCut(client, { dryRun = false } = {}) {
   return { minDocs, minPoints, ceiling, cut, atRisk, safe, dryRun };
 }
 
+/**
+ * What is still waiting on a judge for the tick that is about to run.
+ *
+ * The tick will not fire while anything here is outstanding — a team's result
+ * must never be computed from a half-graded field, because document points
+ * feed the market. Two kinds of outstanding work:
+ *
+ *   undecided  - pricing justifications still submitted/under_review. These
+ *                gate whether the team's new numbers apply at all.
+ *   unrated    - scored documents nobody has rated yet. These feed docScore,
+ *                so running without them silently under-rates that team.
+ */
+async function pendingGrading(client, round, tick) {
+  const { rows } = await client.query(`
+    SELECT ds.id, ds.team_id, ds.doc_type, ds.status, dt.requires_approval, dt.label,
+           t.team_name, ds.points
+      FROM doc_submissions ds
+      JOIN doc_types dt ON dt.id = ds.doc_type
+      JOIN teams t ON t.id = ds.team_id
+     WHERE t.is_active = TRUE AND t.is_disqualified = FALSE
+       AND (
+         -- pricing for THIS tick, still undecided
+         (dt.requires_approval = TRUE
+            AND ds.round IS NOT DISTINCT FROM $1 AND ds.tick IS NOT DISTINCT FROM $2
+            AND ds.status IN ('submitted','under_review'))
+         OR
+         -- any scored document submitted but never rated
+         (dt.requires_approval = FALSE AND dt.max_points > 0 AND ds.points IS NULL)
+       )`, [round ?? null, tick ?? null]);
+
+  const undecided = rows.filter(r => r.requires_approval);
+  const unrated = rows.filter(r => !r.requires_approval);
+  return {
+    complete: rows.length === 0,
+    total: rows.length,
+    undecided: undecided.map(r => ({ id: String(r.id), teamId: String(r.team_id), teamName: r.team_name, doc: r.label, status: r.status })),
+    unrated: unrated.map(r => ({ id: String(r.id), teamId: String(r.team_id), teamName: r.team_name, doc: r.label })),
+  };
+}
+
 module.exports = {
+  pendingGrading,
   evaluateHalftimeCut,
   PARTITION_THRESHOLD, resolveJudgingMode, rebuildAssignments, assignTeamToLightestJudge,
   teamsForJudge, teamComposites, scoresByJudge, recomputeDocPoints, stats,

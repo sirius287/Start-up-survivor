@@ -66,7 +66,8 @@ const isStaffRole = role => role === 'admin' || role === 'judge';
 // before the market runs.
 const SET_DEADLINES_SQL = `
   tick_deadline = NOW() + (tick_minutes || ' minutes')::interval,
-  submission_deadline = NOW() + (GREATEST(tick_minutes - buffer_minutes - 8, 1) || ' minutes')::interval,
+  submission_deadline = NOW() + (GREATEST(tick_minutes - grading_minutes, 1) || ' minutes')::interval,
+  grading_deadline = NOW() + (tick_minutes || ' minutes')::interval,
   review_deadline = NOW() + (GREATEST(tick_minutes - buffer_minutes, 2) || ' minutes')::interval`;
 
 function deadlinesOf(game) {
@@ -77,6 +78,9 @@ function deadlinesOf(game) {
     tickDeadline: ms(game.tick_deadline),
     submissionsOpen: Boolean(game.submission_deadline) && new Date(game.submission_deadline) > new Date(),
     bufferMinutes: game.buffer_minutes,
+    gradingMinutes: game.grading_minutes,
+    gradingDeadline: game.grading_deadline ? new Date(game.grading_deadline).getTime() : null,
+    publishedThroughTick: game.published_through_tick,
     inBuffer: Boolean(game.review_deadline) && new Date(game.review_deadline) <= new Date()
               && Boolean(game.tick_deadline) && new Date(game.tick_deadline) > new Date(),
     serverNow: Date.now(), // clients count down against server time, never their own clock
@@ -94,7 +98,11 @@ async function loadSnapshot(user) {
     const result = await pool.query('SELECT * FROM team_market_state WHERE team_id=$1', [id]);
     if (result.rows[0]) states[String(id)] = marketState(result.rows[0]);
   }
+  // Teams see standings only through the last PUBLISHED tick — i.e. one that
+  // ran with grading complete. Staff always see live numbers.
   const leaderboard = await getLeaderboard();
+  const leaderboardForUser = isStaffRole(user.role) || game.published_through_tick > 0
+    ? leaderboard : [];
   // Bonus points from approved optional docs, and which mandatory docs are
   // still missing — the chase-list for admin before judging closes.
   const docStatus = {};
@@ -143,7 +151,9 @@ async function loadSnapshot(user) {
     pivotDeadline: game.pivot_deadline ? new Date(game.pivot_deadline).getTime() : null,
     pivotOpen: Boolean(game.halftime_shock_at) && Boolean(game.pivot_deadline) && new Date(game.pivot_deadline) > new Date(),
     docStatus,
-    leaderboard, quality, qualityAttributes: QUALITY_ATTRIBUTES, lastUpdate: Date.now(),
+    leaderboard: leaderboardForUser,
+    resultsPending: !isStaffRole(user.role) && game.published_through_tick < game.global_tick,
+    quality, qualityAttributes: QUALITY_ATTRIBUTES, lastUpdate: Date.now(),
   };
 }
 /** A team's document score, 0..1 — points awarded divided by the points
@@ -946,6 +956,16 @@ app.post('/api/game/pivot-window', requireAuth, requireRole('admin'), async (req
   ok(res, await loadSnapshot(req.user));
 } catch (e) { next(e); } });
 
+app.post('/api/game/grading-window', requireAuth, requireRole('admin'), async (req, res, next) => { try {
+  const minutes = Number(req.body.minutes);
+  if (!Number.isInteger(minutes) || minutes < 0 || minutes > 120) return fail(res, 400, 'INVALID_MINUTES', 'minutes must be 0-120.');
+  await withTransaction(async client => {
+    await client.query('UPDATE game_state SET grading_minutes=$1, updated_at=NOW() WHERE id=1', [minutes]);
+    await logEvent(client, { actorType: 'admin', actorId: req.user.id, actorName: req.user.name, kind: 'game.grading_window', summary: `Admin set the grading window to ${minutes} min per tick.` });
+  });
+  ok(res, await loadSnapshot(req.user));
+} catch (e) { next(e); } });
+
 /* Running late is normal at a live event — push every deadline for the
    current window rather than letting the tick fire on a half-empty queue. */
 app.post('/api/game/extend', requireAuth, requireRole('admin'), async (req, res, next) => { try {
@@ -963,7 +983,8 @@ app.post('/api/game/extend', requireAuth, requireRole('admin'), async (req, res,
 
 app.post('/api/game/:action', requireAuth, requireRole('admin'), async (req, res, next) => { try { const actions = { start:['lobby','active'], pause:['active','paused'], resume:['paused','active'], end:[['active','paused'],'ended'] }; const transition = actions[req.params.action]; if (!transition) return fail(res, 400, 'INVALID_ACTION', 'Unknown game action.'); const game = await getGame(); const from = Array.isArray(transition[0]) ? transition[0] : [transition[0]]; if (!from.includes(game.phase)) return fail(res, 409, 'INVALID_GAME_TRANSITION', `Cannot ${req.params.action} the game while it is ${game.phase}.`); await withTransaction(async client => { await client.query(`UPDATE game_state SET phase=$1, game_start_time=COALESCE(game_start_time, CASE WHEN $1='active' THEN NOW() ELSE game_start_time END),
       tick_deadline = CASE WHEN $1='active' THEN NOW() + (tick_minutes || ' minutes')::interval ELSE tick_deadline END,
-      submission_deadline = CASE WHEN $1='active' THEN NOW() + (GREATEST(tick_minutes - buffer_minutes - 8, 1) || ' minutes')::interval ELSE submission_deadline END,
+      submission_deadline = CASE WHEN $1='active' THEN NOW() + (GREATEST(tick_minutes - grading_minutes, 1) || ' minutes')::interval ELSE submission_deadline END,
+      grading_deadline = CASE WHEN $1='active' THEN NOW() + (tick_minutes || ' minutes')::interval ELSE grading_deadline END,
       review_deadline = CASE WHEN $1='active' THEN NOW() + (GREATEST(tick_minutes - buffer_minutes, 2) || ' minutes')::interval ELSE review_deadline END,
       updated_at=NOW() WHERE id=1`, [transition[1]]); await logEvent(client, { actorType: 'admin', actorId: req.user.id, actorName: req.user.name, kind: 'game.phase', summary: `Admin ${req.params.action}ed the game (now ${transition[1]}).` }); }); ok(res, await loadSnapshot(req.user)); } catch (e) { next(e); } });
 /* The halftime shock is its own action, not just another shock fire: it
@@ -986,10 +1007,34 @@ app.delete('/api/shocks/:instanceId', requireAuth, requireRole(['admin', 'judge'
    rejected, never submitted) -> the team's current stored strategy repeats,
    unchanged (DOCS_SYSTEM.md §1). */
 app.post('/api/engine/tick', requireAuth, requireRole('admin'), async (req, res, next) => { try {
+  const force = req.body?.force === true || req.query.force === 'true';
   const result = await withTransaction(async client => {
     const game = await getGame(client);
     if (game.phase !== 'active') throw Object.assign(new Error(`The game is ${game.phase}.`), { status: 409, code: 'GAME_NOT_ACTIVE' });
     const nextTick = game.tick_in_round + 1;
+
+    // GRADING GATE. The tick does not run until every judge has finished,
+    // because document points feed the market — running early would compute
+    // results from a half-graded field. Admin can force past this (a judge
+    // going missing must not be able to deadlock the event), and the override
+    // is logged loudly.
+    const pending = await judging.pendingGrading(client, game.round, nextTick);
+    if (!pending.complete && !force) {
+      const err = new Error(
+        `Grading is not finished — ${pending.undecided.length} pricing decision(s) and ` +
+        `${pending.unrated.length} unrated document(s) outstanding. The tick will not run ` +
+        `on a half-graded field. Finish grading, or force the tick if a judge is unavailable.`);
+      err.status = 409; err.code = 'GRADING_INCOMPLETE'; err.pending = pending;
+      throw err;
+    }
+    if (!pending.complete && force) {
+      await logEvent(client, {
+        actorType: 'admin', actorId: req.user.id, actorName: req.user.name,
+        round: game.round, tick: nextTick, kind: 'tick.forced',
+        summary: `Admin FORCED tick ${nextTick} with ${pending.total} item(s) still ungraded.`,
+        payload: pending,
+      });
+    }
 
     // Anything still undecided for this tick is resolved now, per its
     // doc type's timeout policy (carry_over for pricing, auto_approve
@@ -1086,6 +1131,9 @@ app.post('/api/engine/tick', requireAuth, requireRole('admin'), async (req, res,
     // other before the window closes.
     const tickNo = Number(game.global_tick) + 1;
     await normaliseTickScores(client, tickNo);
+    // Results become visible to teams only now — the tick has run AND grading
+    // was complete (or was explicitly forced by admin).
+    await client.query('UPDATE game_state SET published_through_tick=$1 WHERE id=1', [tickNo]);
 
     await client.query(
       `UPDATE game_state SET global_tick=global_tick+1, tick_in_round=$1, ${SET_DEADLINES_SQL}, last_tick_at=NOW(), updated_at=NOW() WHERE id=1`,
@@ -1095,7 +1143,27 @@ app.post('/api/engine/tick', requireAuth, requireRole('admin'), async (req, res,
     return { teamsUpdated: updates.length, round: game.round, tick: nextTick };
   });
   ok(res, result);
-} catch (e) { if (e.status) return fail(res, e.status, e.code, e.message); next(e); } });
+} catch (e) {
+  if (e.code === 'GRADING_INCOMPLETE') {
+    return res.status(409).json({ success: false, error: { code: e.code, message: e.message, pending: e.pending } });
+  }
+  if (e.status) return fail(res, e.status, e.code, e.message);
+  next(e);
+} });
+
+/* What is still waiting on a judge — drives the admin's "can I run the tick
+   yet" readout and the judges' own outstanding-work list. */
+app.get('/api/grading/status', requireAuth, requireRole(['admin', 'judge']), async (req, res, next) => { try {
+  const game = await getGame();
+  const pending = await withTransaction(c => judging.pendingGrading(c, game.round, game.tick_in_round + 1));
+  ok(res, {
+    ...pending,
+    round: game.round, tick: game.tick_in_round + 1,
+    gradingDeadline: game.grading_deadline ? new Date(game.grading_deadline).getTime() : null,
+    gradingMinutes: game.grading_minutes,
+    serverNow: Date.now(),
+  });
+} catch (e) { next(e); } });
 
 app.use(express.static(frontend));
 app.get('*', (req, res, next) => {

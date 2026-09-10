@@ -124,7 +124,9 @@ export const api = {
   freezeResults: () => request('/api/results/freeze', { method: 'POST' }),
   halftimeCutPreview: () => request('/api/game/halftime-cut/preview'),
   // admin: engine + schedule
-  runTick: () => request('/api/engine/tick', { method: 'POST' }),
+  runTick: (force = false) => request('/api/engine/tick', { method: 'POST', body: JSON.stringify({ force }) }),
+  gradingStatus: () => request('/api/grading/status'),
+  setGradingWindow: (minutes) => request('/api/game/grading-window', { method: 'POST', body: JSON.stringify({ minutes }) }),
   advanceRound: () => request('/api/game/round/advance', { method: 'POST' }),
   extendDeadline: (minutes) => request('/api/game/extend', { method: 'POST', body: JSON.stringify({ minutes }) }),
   fireHalftimeShock: (shockId) =>

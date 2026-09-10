@@ -186,7 +186,14 @@ async function main() {
     }
     console.log(`  ${selfDeployed} teams clicked Deploy themselves`);
 
-    const tickRes = await req(admin, 'POST', '/api/engine/tick');
+    // The tick is gated on grading being finished.
+    const g = (await req(admin, 'GET', '/api/grading/status')).data;
+    console.log(`  grading: ${g.complete ? 'complete' : `${g.undecided.length} pricing + ${g.unrated.length} unrated OUTSTANDING`}`);
+    let tickRes = await req(admin, 'POST', '/api/engine/tick', { force: false });
+    if (tickRes.code === 'GRADING_INCOMPLETE') {
+      console.log(`  \x1b[33mtick BLOCKED\x1b[0m — ${tickRes.body.error.pending.total} item(s) ungraded; admin forces it`);
+      tickRes = await req(admin, 'POST', '/api/engine/tick', { force: true });
+    }
     console.log(`  \x1b[1mENGINE TICK ${tick}\x1b[0m → ${tickRes.data?.teamsUpdated} teams simulated (rest already self-deployed)`);
 
     /* ---- halftime, after tick 2 ---- */

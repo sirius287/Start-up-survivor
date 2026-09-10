@@ -62,7 +62,7 @@ register + team login. staff bookmark their own url.
 
 ```bash
 npm test          # syntax check
-npm run test:e2e  # 192 permission + function checks
+npm run test:e2e  # 198 permission + function checks
 npm run simulate  # full 40-team event, start to finish, ~10s
 ```
 
@@ -215,11 +215,29 @@ tick 1        tick 2        ⚡ HALFTIME      tick 3        tick 4
 idea brief    pitch deck    + the cut       financial     final deck
 (15 pts)      (20 pts)      + pivot window  model (10)    (20 pts)
                             pivot (25 pts)  gtm (10)
+
+each tick:  20 min submit → 25 min grading → [gate: all graded?] → tick fires
 ```
 
-each 45-min tick splits: **27 min submit → 8 min judges review → 10 min buffer →
-tick fires**. the buffer is a fix-it gap. submissions freeze, judges keep
-working, and if something's wrong there's room to fix it before the market runs.
+each 45-min tick splits: **20 min submit → 25 min grading → tick fires**.
+
+**the tick will not run until everyone's graded.** it's a hard gate, not a
+suggestion — document points feed the market, so running early would compute
+results from a half-graded field. admin gets a live readout of exactly what's
+outstanding (which team, which doc, needs-decision vs needs-rating).
+
+if a judge goes missing, admin can **force** the tick. that can't deadlock the
+event, and the override is logged loudly as `tick.forced` with the list of what
+was skipped. teams and judges can't force it, only admin.
+
+**results are published only after the tick runs**, which means only after
+grading is done. before that teams see no leaderboard at all — no half-graded
+standings leaking out.
+
+note on the 25 min: it sits **inside** the 45-min tick, not on top of it.
+stacking it on top makes 4 ticks take 280 min and blows past a 6-hour day
+(6.3h). inside, the whole event lands at ~4.7h with room. tune it with
+`POST /api/game/grading-window` if you want different.
 
 every countdown is on **server time**. a team's own clock is irrelevant.
 
@@ -448,7 +466,7 @@ revenue, weaker per-tick contribution, fewer doc points. money alone doesn't win
 all 8 disqualified teams landed at ranks 33–40. one of them had a market score of
 **92** and still ranked 33rd because it never submitted a document.
 
-`npm run test:e2e` runs **192 checks** covering every role against every endpoint.
+`npm run test:e2e` runs **198 checks** covering every role against every endpoint.
 the important half is what's *blocked*: teams can't reach admin endpoints, can't
 reach judge endpoints, can't read another team's anything, can't deploy as
 someone else, can't approve their own work, can't submit a price above the ui

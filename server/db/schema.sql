@@ -564,3 +564,13 @@ DO $$ BEGIN
       UNIQUE (team_id, doc_type, round, tick);
   END IF;
 END $$;
+
+-- Grading window: the last N minutes of each tick belong to the judges, and
+-- the tick will not fire until everything pending is graded. 25 min sits
+-- INSIDE the 45-minute tick (20 submit -> 25 grade -> fire) rather than on top
+-- of it; stacking it on top would push a 4-tick event past 6 hours.
+ALTER TABLE game_state ADD COLUMN IF NOT EXISTS grading_minutes INT NOT NULL DEFAULT 25;
+ALTER TABLE game_state ADD COLUMN IF NOT EXISTS grading_deadline TIMESTAMPTZ;
+-- Highest tick whose results teams are allowed to see. Bumped only when the
+-- tick has run AND grading was complete.
+ALTER TABLE game_state ADD COLUMN IF NOT EXISTS published_through_tick INT NOT NULL DEFAULT 0;
