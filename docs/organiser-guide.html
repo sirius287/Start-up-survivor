@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Startup Survivor — Organiser Guide</title>
+<link rel="stylesheet" href="_style.css"></head>
+<body>
+
+<div class="cover">
+  <div class="kicker">V-TAPP · V-Launchpad · VIT-AP IIEC &amp; VTBIF</div>
+  <h1>Startup<em>Survivor</em></h1>
+  <div class="sub">Running the event: the day's schedule, how to brief your faculty
+    judges, what every control does, and what to do when something goes wrong.</div>
+  <div class="meta">
+    <div><b>Organiser Guide</b>You are the Game Master</div>
+    <div><b>6 hours</b>11:00 – 17:00</div>
+    <div><b>40+ teams</b>3+ judges</div>
+  </div>
+</div>
+
+<h2>What this event actually is</h2>
+<p>Teams build a startup on a track, then run it through a market simulation four
+times. Halfway through you fire a shock at everyone, they pivot, and it runs again.
+Faculty judges grade the documents, and those grades feed back into the simulation.</p>
+<p>Your job as Game Master is three things: <strong>keep the clock moving</strong>,
+<strong>keep the judging queue empty</strong>, and <strong>fire the shock at the
+right moment</strong>. The system handles fairness on its own.</p>
+
+<div class="box info">
+  <div class="t">Design principle worth knowing</div>
+  <p>Every mechanism was built so that <strong>no participant can gain from anything
+  except thinking well</strong>. Clicking fast does nothing. Judges can't favour
+  anyone. Randomness is seeded and reproducible. If a team disputes a result, the
+  full audit log can reconstruct exactly what happened.</p>
+</div>
+
+<h2>Before the day</h2>
+<ol class="steps">
+  <li><b>Set up judges.</b> They're defined in the <code>.env</code> file, not in a
+    signup screen. Add a name and code per judge, numbered from 1. However many
+    pairs you add, that many judges exist.</li>
+  <li><b>Print the judge cards.</b> Each judge needs their code (e.g.
+    <code>JUDGE1</code>) and the URL <code>/#/judge</code>. That's their whole
+    login — no password, no account setup.</li>
+  <li><b>Set the admin passphrase</b> in <code>ADMIN_PASSWORD_HASH</code>. Only you
+    should have it.</li>
+  <li><b>Run a rehearsal.</b> <code>npm run simulate</code> runs a full 40-team event
+    against a scratch database in about 10 seconds. Do this the week before.</li>
+  <li><b>Send participants the participant guide</b> and the Google Doc templates so
+    they arrive prepared.</li>
+</ol>
+
+<div class="box warn">
+  <div class="t">Check this one setting before the doors open</div>
+  <p>Every team at the venue shares one WiFi connection, which means they share one
+  public IP address. The login rate limit is set to <strong>300 requests/minute</strong>
+  to handle that. If you lower it, teams will get locked out during registration.
+  Leave <code>AUTH_RATE_LIMIT</code> alone unless you know why you're changing it.</p>
+</div>
+
+<h2>The day, hour by hour</h2>
+<div class="tl">
+  <div class="row"><div class="time">11:00 – 11:20</div><div class="what"><b>Doors open</b><span>Teams register and log in. Judges log in with their codes. Chase anyone whose pre-event documents are missing.</span></div></div>
+  <div class="row"><div class="time">11:20 – 12:05</div><div class="what"><b>Tick 1</b><span>Idea &amp; Problem Statement due. 20 min to submit, 25 min for judges, then the tick fires.</span></div></div>
+  <div class="row"><div class="time">12:05 – 12:50</div><div class="what"><b>Tick 2</b><span>Pitch Deck due — the last thing before the shock.</span></div></div>
+  <div class="row"><div class="time">12:50 – 13:05</div><div class="what"><b>⚡ Halftime shock + the cut</b><span>You fire this. It locks pre-shock documents and disqualifies teams that submitted nothing.</span></div></div>
+  <div class="row"><div class="time">13:05 – 13:50</div><div class="what"><b>Pivot window</b><span>45 minutes. Teams submit their Pivot Rationale — the biggest single score in the event.</span></div></div>
+  <div class="row"><div class="time">13:50 – 14:35</div><div class="what"><b>Tick 3</b><span>Financial Model and Go-to-Market Plan due.</span></div></div>
+  <div class="row"><div class="time">14:35 – 15:20</div><div class="what"><b>Tick 4</b><span>Final Pitch Deck due.</span></div></div>
+  <div class="row"><div class="time">15:20 – 16:00</div><div class="what"><b>Judging catch-up</b><span>Judges finish anything outstanding. No new ticks.</span></div></div>
+  <div class="row"><div class="time">16:00 – 16:40</div><div class="what"><b>Freeze results</b><span>Lock the scoring weights, verify the standings, handle any disputes.</span></div></div>
+  <div class="row"><div class="time">16:40 – 17:00</div><div class="what"><b>🏆 Results</b><span>Reveal the standings and hand out prizes.</span></div></div>
+</div>
+
+<div class="box">
+  <div class="t">Each 45-minute tick, internally</div>
+  <p><strong>20 min</strong> teams submit → <strong>25 min</strong> judges grade →
+  <strong>tick fires</strong>. The tick will not run until grading is finished, so
+  the 25 minutes is a real deadline for your judges, not a suggestion.</p>
+</div>
+
+<div class="pb"></div>
+
+<h2>Briefing your faculty judges</h2>
+<p>Faculty are not gamers and shouldn't need to understand the simulation. Brief
+them on four things and nothing else.</p>
+
+<h3>1. Logging in takes five seconds</h3>
+<p>Go to <code>/#/judge</code>, type your code, done. No password, no account. Each
+judge has their own code so their scores are attributed to them.</p>
+
+<h3>2. There are two completely different jobs</h3>
+<table>
+  <tr><th>Job</th><th>What you do</th><th>Why</th></tr>
+  <tr><td><strong>Pricing Justification</strong></td><td><strong>Approve or reject.</strong> No score.</td><td>This decides whether the team's new numbers apply this tick. It's a validity check: do the citations support the price?</td></tr>
+  <tr><td><strong>Everything else</strong></td><td><strong>Award points.</strong> No approve/reject.</td><td>These are graded for quality and feed the team's score.</td></tr>
+</table>
+<p>The system enforces this — a judge physically cannot reject a pitch deck or put a
+score on a pricing doc.</p>
+
+<h3>3. Deadlines are real</h3>
+<p>Judges have <strong>25 minutes per tick</strong>. The market will not run until
+every pricing decision is made and every document is rated. If judges fall behind,
+the whole event stalls. Tell them this explicitly.</p>
+
+<h3>4. What they see when reviewing</h3>
+<p>Before the document, the screen shows how that team is actually doing — money
+made or lost, revenue, points so far, and an insolvency warning if relevant. They're
+never rating a pricing doc blind.</p>
+
+<div class="box ok">
+  <div class="t">Things you don't need to explain to faculty</div>
+  <p>They can't break anything. Judges have no access to start/stop the game, reset
+  anything, fire targeted shocks, or change scoring. Two judges opening the same
+  submission is handled automatically — the second one sees it's claimed and moves
+  on. Multiple judges scoring the same team is expected and averaged.</p>
+</div>
+
+<h3>Judge allocation happens automatically</h3>
+<table>
+  <tr><th>Teams</th><th>What happens</th></tr>
+  <tr><td><strong>Under 20</strong></td><td>Every judge sees every team. Scores are averaged.</td></tr>
+  <tr><td><strong>20 or more</strong></td><td>Teams are split evenly between judges (40 teams / 3 judges = 14/13/13). Because each team is then seen by one judge, scores are statistically normalised so a harsh judge doesn't unfairly sink their teams.</td></tr>
+</table>
+<p>The mode locks at the first tick so it can't change mid-event. Late-registering
+teams are auto-assigned to whichever judge has the fewest.</p>
+
+<h2>Your controls</h2>
+<p>Everything below is at <code>/#/gm</code>, admin only.</p>
+<table>
+  <tr><th>Control</th><th>What it does</th><th>When</th></tr>
+  <tr><td><strong>Start / Pause / Resume / End</strong></td><td>Game phase</td><td>Start at 11:20, end after tick 4</td></tr>
+  <tr><td><strong>Run tick</strong></td><td>Fires the market for everyone</td><td>End of each tick window</td></tr>
+  <tr><td><strong>Force tick</strong></td><td>Runs the tick despite ungraded work</td><td><span class="pill red">emergency only</span></td></tr>
+  <tr><td><strong>Fire halftime shock</strong></td><td>The shock + document lock + the cut, all at once</td><td>12:50, once</td></tr>
+  <tr><td><strong>Extend deadlines</strong></td><td>Pushes every deadline for the current window</td><td>When running late</td></tr>
+  <tr><td><strong>Advance round</strong></td><td>Moves to round 2</td><td>After the pivot window</td></tr>
+  <tr><td><strong>Freeze results</strong></td><td>Locks scoring weights permanently</td><td>Before the reveal</td></tr>
+  <tr><td><strong>Reset</strong></td><td>Wipes all teams</td><td><span class="pill red">never, during an event</span></td></tr>
+</table>
+
+<div class="box warn">
+  <div class="t">The tick won't run — this is normal</div>
+  <p>If you press Run tick and get <strong>"Grading is not finished"</strong>, that's
+  the system working correctly. Document points feed the market, so running early
+  would compute results from a half-graded field.</p>
+  <p>The panel lists exactly what's outstanding — which team, which document, and
+  whether it needs a decision or a rating. Go tell those judges. Only use
+  <strong>Force tick</strong> if a judge has genuinely gone missing; it's logged
+  permanently with a list of what was skipped.</p>
+</div>
+
+<div class="pb"></div>
+
+<h2>Firing the halftime shock</h2>
+<p>This is the centrepiece of the event and it does four things in one click, so do
+it deliberately.</p>
+<ol class="steps">
+  <li><b>Preview the cut first.</b> The panel shows exactly who would be disqualified
+    before you commit to anything.</li>
+  <li><b>Check the "at risk" list.</b> These are teams below the bar only because
+    judges haven't graded them yet. They are <strong>never</strong> auto-cut — chase
+    the grading first if you want them assessed fairly.</li>
+  <li><b>Fire it.</b> The shock hits every team equally, pre-shock documents lock
+    permanently, and the cut executes.</li>
+  <li><b>Announce it in the room.</b> This is the dramatic moment of the day — don't
+    let it happen silently on 40 laptops.</li>
+</ol>
+
+<div class="box">
+  <div class="t">The cut rule</div>
+  <p>Teams that submitted <strong>zero documents</strong> before halftime are
+  disqualified. It's a participation gate, not a quality bar — anyone who did the
+  work stays in. Disqualified teams keep their login but can't submit or deploy, and
+  rank below all surviving teams.</p>
+  <p>You can <strong>reinstate</strong> any team if the cut caught someone unfairly.</p>
+</div>
+
+<h2>When something goes wrong</h2>
+<table>
+  <tr><th>Problem</th><th>What to do</th></tr>
+  <tr><td>Judges are behind and the tick is blocked</td><td><strong>Extend deadlines</strong> to buy time. If a judge has genuinely vanished, <strong>Force tick</strong>.</td></tr>
+  <tr><td>A team's laptop died</td><td>They lose nothing — an unsubmitted tick carries over their last approved strategy automatically.</td></tr>
+  <tr><td>A team says their document is rejected unfairly</td><td>You can override any judge decision. It's logged with your name.</td></tr>
+  <tr><td>A team was cut but shouldn't have been</td><td>Reinstate them from the admin panel.</td></tr>
+  <tr><td>A team disputes their final placing</td><td>Open <code>/#/logs</code>, filter by their team, and walk through it. Every action is timestamped.</td></tr>
+  <tr><td>A team says "we made the most money, why aren't we first?"</td><td>Money is half the score. Show them the standings breakdown — it lists money, revenue, documents, judge score and market score side by side.</td></tr>
+  <tr><td>Running badly behind schedule</td><td>Reduce the grading window, or drop tick 4. The schedule is configurable.</td></tr>
+</table>
+
+<h2>The logs</h2>
+<p>At <code>/#/logs</code>, open to you and your judges. Two tabs:</p>
+<ul>
+  <li><strong>Event log</strong> — every action ever taken, filterable by team or
+    type, exportable as CSV. A 40-team event generates around 500 entries.</li>
+  <li><strong>Final standings</strong> — the full scoring breakdown per team.</li>
+</ul>
+<p>Entries read in plain English, e.g. <em>"Team08 disqualified at halftime:
+Submitted 0 of the 1 document(s) required"</em> or <em>"Tick 1 carried over team 3's
+previous strategy (no approved request)"</em>. This is your dispute-resolution tool
+— export the CSV at the end of the day and keep it.</p>
+
+<div class="pb"></div>
+
+<h2>How scoring works (for when you're asked)</h2>
+<p>Two halves, each out of 100, weighted evenly by default:</p>
+<div class="grid">
+  <div><div class="n">50%</div><div class="l">Market performance</div></div>
+  <div><div class="n">50%</div><div class="l">Document points</div></div>
+</div>
+
+<h3>Market performance</h3>
+<p>Each tick, every team is scored <strong>0–100 against the other teams on their
+track</strong>, based on what they actually kept (revenue minus costs). Those four
+scores are then averaged.</p>
+<p>This matters: with only four ticks, using raw rupees would let a single lucky
+tick decide the whole event. Averaging normalised scores means all four count
+equally. It also means a team on a tough track isn't punished for their track's
+baseline — they're only ever compared to their direct rivals.</p>
+
+<h3>Document points</h3>
+<p>Judge-awarded, totalling exactly 100 across the six graded documents. These also
+feed back into the simulation as up to a ±30% swing on how attractive a team is to
+customers — which is how "judges affect the outcome" is actually implemented.</p>
+
+<h3>What's deliberately not counted twice</h3>
+<p>The 1–10 rubric scores judges give already influence the market through customer
+retention. They aren't added again as a third scoring component, because that would
+be counting the same opinion twice.</p>
+
+<div class="box info">
+  <div class="t">Weights are adjustable — but freeze them</div>
+  <p>You can change the 50/50 split before results are revealed. Once you press
+  <strong>Freeze results</strong> they're locked permanently. Freeze before you look
+  at the standings, so nobody can suggest the weights were tuned to pick a winner.</p>
+</div>
+
+<h2>Fairness guarantees you can state publicly</h2>
+<ul>
+  <li><strong>Clicking fast gains nothing.</strong> All teams tick simultaneously.</li>
+  <li><strong>Judges cannot favour anyone.</strong> Events and powers hit the entire
+    field; there's no targeting option in their interface at all.</li>
+  <li><strong>Results are reproducible.</strong> Randomness is seeded, so the same
+    inputs always produce the same outputs.</li>
+  <li><strong>Judge timing doesn't decide winners.</strong> The tick waits for
+    grading, so nobody benefits from being graded early.</li>
+  <li><strong>No team is punished for a slow queue.</strong> Ungraded work never
+    causes a cut or a penalty.</li>
+  <li><strong>Teams can't see each other's standings</strong> until you release them.</li>
+  <li><strong>Everything is logged</strong> in an append-only trail written in the
+    same transaction as the action, so the log can never disagree with the data.</li>
+</ul>
+
+<h2>Quick reference</h2>
+<table>
+  <tr><th>Who</th><th>URL</th><th>Login</th></tr>
+  <tr><td>Participants</td><td><code>/</code></td><td>Register / team password</td></tr>
+  <tr><td>Faculty judges</td><td><code>/#/judge</code></td><td>Their code (JUDGE1, JUDGE2…)</td></tr>
+  <tr><td>You</td><td><code>/#/gm</code></td><td>Admin passphrase</td></tr>
+  <tr><td>Logs</td><td><code>/#/logs</code></td><td>Staff only</td></tr>
+</table>
+<p>The judge and Game Master doors are <strong>not linked from the landing page</strong>.
+Participants only see register and team login. Share those URLs with staff directly.</p>
+
+<div class="box ok">
+  <div class="t">Your five jobs on the day</div>
+  <p><strong>1.</strong> Start the game at 11:20.
+  <strong>2.</strong> Run each tick when grading clears.
+  <strong>3.</strong> Fire the halftime shock at 12:50 and announce it loudly.
+  <strong>4.</strong> Keep the judging queue empty — chase judges, extend if needed.
+  <strong>5.</strong> Freeze results before you look at them, then reveal.</p>
+</div>
+
+</body></html>

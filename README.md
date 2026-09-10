@@ -66,6 +66,20 @@ npm run test:e2e  # 198 permission + function checks
 npm run simulate  # full 40-team event, start to finish, ~10s
 ```
 
+**guides (pdf, in `docs/`):**
+
+- `docs/participant-guide.pdf` — hand this to teams before the event
+- `docs/organiser-guide.pdf` — for you: the schedule, how to brief faculty
+  judges, every control, and what to do when something breaks
+
+both are generated from the html next to them:
+
+```bash
+cd docs && "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+  --headless --no-pdf-header-footer --print-to-pdf=participant-guide.pdf \
+  file://$PWD/participant-guide.html
+```
+
 ---
 
 # part 1 — what was fucked
