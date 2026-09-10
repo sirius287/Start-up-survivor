@@ -105,13 +105,13 @@ function renderLeaderboard(state) {
       <div class="lb-row ${i===0?'lb-leader':''}">
         <div class="lb-rank">${medal}</div>
         <div class="lb-info">
-          <div class="lb-name">${t.teamName} <span class="badge ${catBadge(t.category)} badge-sm">${t.category}</span></div>
+          <div class="lb-name"><span class="lb-team">${t.teamName}</span><span class="lb-cat">${t.category}</span></div>
           <div class="lb-startup">${t.startupName}</div>
           <div class="lb-bar-wrap"><div class="lb-bar" style="width:${bar}%"></div></div>
         </div>
         <div class="lb-stats">
           <div class="lb-revenue">${Fmt.currency(t.totalRevenue, true)}</div>
-          <div class="lb-sub">${t.unitsSold} units · ${t.convRate.toFixed(1)}% CVR</div>
+          <div class="lb-sub">${t.unitsSold} units</div>
         </div>
       </div>`;
   }).join('');
