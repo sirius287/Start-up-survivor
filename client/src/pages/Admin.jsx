@@ -18,6 +18,7 @@ export default function Admin({ nav }) {
   const [catalog, setCatalog] = useState([]);
   const [targeting, setTargeting] = useState(null); // shockId to deploy with target
   const [scoring, setScoring] = useState(null); // teamId being scored
+  const [detail, setDetail] = useState(null); // team object for detail view
 
   useEffect(() => {
     if (!user || user.role !== 'judge') nav('/');
@@ -77,7 +78,7 @@ export default function Admin({ nav }) {
 
         <div className="grid-2">
           <div className="panel">
-            <div className="panel-h">👥 Teams ({teams.length})</div>
+            <div className="panel-h">👥 Teams ({teams.length}) — click a row for full detail</div>
             {teams.length === 0 && <div className="empty-note">No teams have joined yet. Share the URL.</div>}
             {teams.length > 0 && (
               <table className="tbl">
@@ -87,12 +88,12 @@ export default function Admin({ nav }) {
                     const lb = state?.leaderboard?.find((l) => String(l.teamId) === String(t.id));
                     const q = state?.quality?.[t.id];
                     return (
-                      <tr key={t.id}>
+                      <tr key={t.id} onClick={() => setDetail(t)} style={{ cursor: 'pointer' }} title="Click for full team detail">
                         <td><b>{t.teamName}</b><br /><span className="muted" style={{ fontSize: 11 }}>{t.startupName} · {t.category}</span></td>
                         <td className="mono" style={{ color: 'var(--green)' }}>{fmt.currency(lb?.totalRevenue, true)}</td>
                         <td className="mono">{fmt.currency(lb?.budget, true)}</td>
                         <td className="mono" style={{ color: 'var(--gold)' }}>{q?.composite != null ? `★ ${Number(q.composite).toFixed(1)}` : '—'}</td>
-                        <td><button className="btn btn-ghost btn-sm" onClick={() => setScoring(t)}>Rate</button></td>
+                        <td><button className="btn btn-ghost btn-sm" onClick={(e) => { e.stopPropagation(); setScoring(t); }}>Rate</button></td>
                       </tr>
                     );
                   })}
@@ -140,6 +141,8 @@ export default function Admin({ nav }) {
 
         <CustomShock toast={toast} teams={teams} refresh={() => api.gameState().then(setState)} />
 
+        <DeploymentsPanel teams={teams} />
+
         <div className="panel">
           <div className="panel-h">🌩 Active Shocks ({state?.activeShocks?.length ?? 0})</div>
           {(state?.activeShocks?.length ?? 0) === 0 && <div className="empty-note">No active shocks. Deploy from the arsenal above.</div>}
@@ -156,13 +159,114 @@ export default function Admin({ nav }) {
 
       {targeting && <TargetModal shock={targeting} teams={teams} toast={toast} refresh={() => api.gameState().then(setState)} close={() => setTargeting(null)} />}
       {scoring && <ScoreModal team={scoring} attrs={attrs} existing={state?.quality?.[scoring.id]} toast={toast} refresh={() => api.gameState().then(setState)} close={() => setScoring(null)} />}
+      {detail && <TeamDetail team={detail} toast={toast} close={() => setDetail(null)} />}
       <Toasts items={items} />
     </div>
   );
 }
 
-function TargetModal({ shock, teams, toast, refresh, close }) {
-  const [teamId, setTeamId] = useState('');
+function DeploymentsPanel({ teams }) {
+  const [rows, setRows] = useState([]);
+  const [filter, setFilter] = useState('');
+  const load = useCallback(async () => {
+    try {
+      setRows(await api.deployments(filter || null, 50));
+    } catch { /* best-effort live log */ }
+  }, [filter]);
+  useEffect(() => {
+    load();
+    const id = setInterval(load, 5000);
+    return () => clearInterval(id);
+  }, [load]);
+  return (
+    <div className="panel">
+      <div className="panel-h">📋 Deployment Log <span className="muted" style={{ textTransform: 'none', letterSpacing: 0 }}>— every tick, every team</span></div>
+      <div className="row" style={{ marginBottom: 12 }}>
+        <select className="input" style={{ maxWidth: 260 }} value={filter} onChange={(e) => setFilter(e.target.value)} aria-label="Filter by team">
+          <option value="">🌍 All teams</option>
+          {teams.map((t) => <option key={t.id} value={t.id}>{t.teamName}</option>)}
+        </select>
+        <button className="btn btn-dark btn-sm" onClick={load}>↻ Refresh</button>
+      </div>
+      {rows.length === 0 && <div className="empty-note">No deployments yet. Ticks appear here live.</div>}
+      {rows.length > 0 && (
+        <div style={{ overflowX: 'auto' }}>
+          <table className="tbl">
+            <thead><tr><th>Time</th><th>Team</th><th>Tk</th><th>Price</th><th>Mkt Spend</th><th>Seg</th><th>Units</th><th>Revenue</th><th>Cost</th><th>CVR</th></tr></thead>
+            <tbody>
+              {rows.map((d) => (
+                <tr key={d.id}>
+                  <td className="mono" style={{ whiteSpace: 'nowrap' }}>{fmt.time(d.at)}</td>
+                  <td><b>{d.teamName}</b></td>
+                  <td className="mono">T{d.tick}</td>
+                  <td className="mono">{fmt.currency(d.price)}</td>
+                  <td className="mono">{fmt.currency(d.marketingSpend, true)}</td>
+                  <td><span className="badge">{d.targetSegment || '—'}</span></td>
+                  <td className="mono">{fmt.units(d.units)}</td>
+                  <td className="mono" style={{ color: 'var(--green)' }}>+{fmt.currency(d.revenue, true)}</td>
+                  <td className="mono" style={{ color: 'var(--red)' }}>-{fmt.currency(d.cost, true)}</td>
+                  <td className="mono">{fmt.percent(d.conversion)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TeamDetail({ team, toast, close }) {
+  const [stats, setStats] = useState(null);
+  const [err, setErr] = useState('');
+  useEffect(() => {
+    api.teamStats(team.id).then(setStats).catch((e) => setErr(e.message));
+  }, [team.id]);
+  const m = stats?.market;
+  return (
+    <Modal title={`${team.teamName} <em>— dossier</em>`} onClose={close} wide>
+      {!stats && !err && <p className="muted">Loading full team record…</p>}
+      {err && <p className="form-error">{err}</p>}
+      {stats && (
+        <div className="stack">
+          <div className="row">
+            <span className="badge badge-ember">{stats.team.category}</span>
+            <span className="muted" style={{ fontSize: 13 }}>{stats.team.startupName}{stats.team.tagline ? ` — "${stats.team.tagline}"` : ''}</span>
+            <span className="badge" style={{ marginLeft: 'auto' }}>🎟 {stats.allowance.ticksMax - stats.allowance.ticksUsed}/{stats.allowance.ticksMax} ticks left · ⏳ {stats.allowance.hourlyMax - stats.allowance.hourlyUsed}/{stats.allowance.hourlyMax} hourly</span>
+          </div>
+          <div className="grid-4">
+            <div className="metric"><div className="k">Revenue</div><div className="v" style={{ color: 'var(--green)' }}>{fmt.currency(m?.totalRevenue, true)}</div></div>
+            <div className="metric"><div className="k">Net Profit</div><div className="v" style={{ color: (m?.netProfit ?? 0) >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt.currency(m?.netProfit, true)}</div></div>
+            <div className="metric"><div className="k">Budget</div><div className="v">{fmt.currency(m?.budget, true)}</div></div>
+            <div className="metric"><div className="k">Units</div><div className="v">{fmt.units(stats.totals.units)}</div></div>
+          </div>
+          <div className="panel-h" style={{ marginBottom: 8 }}>💸 Spend breakdown ({stats.totals.deployments} ticks)</div>
+          <div className="q-row"><span className="ql">📣 Marketing</span><span className="mono">{fmt.currency(stats.spend.marketing, true)}</span></div>
+          <div className="q-row"><span className="ql">🔥 Burn (operating)</span><span className="mono">{fmt.currency(stats.spend.burn, true)}</span></div>
+          <div className="q-row"><span className="ql">🧾 Market fees</span><span className="mono">{fmt.currency(stats.spend.fees, true)}</span></div>
+          <div className="q-row"><span className="ql"><b>Total spend</b></span><span className="mono" style={{ color: 'var(--red)' }}><b>{fmt.currency(stats.spend.total, true)}</b></span></div>
+          <div className="q-row"><span className="ql">Avg price · segment mix</span><span className="mono">{fmt.currency(stats.totals.avgPrice)} · {(stats.segmentMix || []).map((s) => `${s.target_segment || '?'}×${s.n}`).join(' ') || '—'}</span></div>
+          <div className="panel-h" style={{ marginBottom: 8, marginTop: 8 }}>📋 Deployment history</div>
+          {(stats.deployments?.length ?? 0) === 0 && <div className="empty-note">No deployments yet.</div>}
+          {(stats.deployments || []).map((d) => (
+            <div key={d.id} className="log-row">
+              <span className="tm">{fmt.time(d.at)}</span>
+              <span className="tk">T{d.tick}</span>
+              <span>{fmt.currency(d.price)}</span>
+              <span className="m">mkt {fmt.currency(d.marketingSpend, true)}</span>
+              <span className="c">{d.targetSegment || '—'}</span>
+              <span className="g">+{fmt.currency(d.revenue, true)}</span>
+              <span style={{ color: 'var(--red)' }}>-{fmt.currency(d.cost, true)}</span>
+              <span className="m">{fmt.units(d.units)}u · {fmt.percent(d.conversion)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+function TargetModal({ shock, teams, toast, refresh, close }) {  const [teamId, setTeamId] = useState('');
   const [busy, setBusy] = useState(false);
   const fire = async () => {
     setBusy(true);

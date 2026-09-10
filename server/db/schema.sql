@@ -99,3 +99,5 @@ CREATE INDEX IF NOT EXISTS judge_scores_team_idx ON judge_scores(team_id);
 ALTER TABLE team_market_state ADD COLUMN IF NOT EXISTS quality_score NUMERIC(4,2);
 ALTER TABLE team_market_state ADD COLUMN IF NOT EXISTS quality_updated_at TIMESTAMPTZ;
 ALTER TABLE market_history ADD COLUMN IF NOT EXISTS quality NUMERIC(4,2);
+ALTER TABLE market_history ADD COLUMN IF NOT EXISTS target_segment TEXT;
+ALTER TABLE market_history ADD COLUMN IF NOT EXISTS cost NUMERIC(14,2);

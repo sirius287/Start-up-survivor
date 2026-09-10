@@ -8,7 +8,10 @@ async function request(url, options = {}) {
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok || body.success === false) {
-    throw new Error(body.error?.message || `Request failed (${res.status}).`);
+    const err = new Error(body.error?.message || `Request failed (${res.status}).`);
+    err.code = body.error?.code;
+    err.status = res.status;
+    throw err;
   }
   return body.data;
 }
@@ -64,6 +67,9 @@ export const api = {
     request(`/api/teams/${teamId}/deploy`, { method: 'POST', body: JSON.stringify(strategy) }),
   saveBmc: (teamId, field, value) =>
     request(`/api/teams/${teamId}/bmc`, { method: 'PATCH', body: JSON.stringify({ field, value }) }),
+  teamStats: (teamId) => request(`/api/teams/${teamId}/stats`),
+  deployments: (teamId, limit = 50) =>
+    request(`/api/deployments?limit=${limit}${teamId ? `&teamId=${teamId}` : ''}`),
   // judge
   gameAction: (action) => request(`/api/game/${action}`, { method: 'POST' }),
   resetGame: () => request('/api/game/reset', { method: 'POST' }),

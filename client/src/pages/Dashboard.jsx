@@ -63,7 +63,9 @@ export default function Dashboard({ nav }) {
       onState(s);
       toast.success('Strategy deployed!', 'Check your metrics.');
     } catch (e) {
-      toast.error('Deployment failed', e.message);
+      if (e.code === 'TICK_LIMIT_REACHED') toast.warning('No ticks left', e.message);
+      else if (e.code === 'HOURLY_LIMIT_REACHED') toast.warning('Hourly limit reached', e.message);
+      else toast.error('Deployment failed', e.message);
     }
     setBusy(false);
   };
@@ -280,8 +282,7 @@ function Chart({ ms }) {
 /* Strategy console with draft-preserving sliders:
    server values seed the draft; polls only re-seed when the server value
    actually changed AND the user isn't touching the console. */
-function Console({ ms, phase, busy, onDeploy }) {
-  const [draft, setDraft] = useState(() => ({
+function Console({ ms, phase, busy, onDeploy }) {  const [draft, setDraft] = useState(() => ({
     price: ms.productPrice, mkt: ms.marketingSpend, segment: ms.targetSegment || 'mass',
   }));
   const synced = useRef({ price: ms.productPrice, mkt: ms.marketingSpend, segment: ms.targetSegment });
@@ -303,6 +304,15 @@ function Console({ ms, phase, busy, onDeploy }) {
   }, [ms]);
 
   const deployable = phase === 'active' && !busy;
+  const al = ms.allowance;
+  const ticksLeft = al ? al.ticksMax - al.ticksUsed : null;
+  const hourlyLeft = al ? al.hourlyMax - al.hourlyUsed : null;
+  const capped = al && (ticksLeft <= 0 || hourlyLeft <= 0);
+  const capReason = !al ? '' : ticksLeft <= 0
+    ? `Tick allowance used up (${al.ticksUsed}/${al.ticksMax}). No more deploys this event.`
+    : hourlyLeft <= 0
+      ? `Hourly limit reached (${al.hourlyUsed}/${al.hourlyMax} this hour). Try again later.`
+      : '';
   return (
     <div className="panel"
       onFocus={() => { editing.current = true; }}
@@ -310,6 +320,13 @@ function Console({ ms, phase, busy, onDeploy }) {
       onPointerDown={() => { editing.current = true; }}
       onPointerUp={() => { editing.current = false; }}>
       <div className="panel-h">🎮 Strategy Console</div>
+
+      {al && (
+        <div className="row" style={{ marginBottom: 12 }}>
+          <span className={`badge ${ticksLeft <= 0 ? 'badge-red' : 'badge-ember'}`}>🎟 Ticks {al.ticksMax - al.ticksUsed}/{al.ticksMax} left</span>
+          <span className={`badge ${hourlyLeft <= 0 ? 'badge-red' : ''}`}>⏳ Hourly {al.hourlyMax - al.hourlyUsed}/{al.hourlyMax} left</span>
+        </div>
+      )}
 
       <div className="field">
         <div className="row" style={{ justifyContent: 'space-between' }}>
@@ -343,11 +360,12 @@ function Console({ ms, phase, busy, onDeploy }) {
         <p className="muted" style={{ fontSize: 12, margin: '2px 0 0' }}>{SEGMENT_INFO[draft.segment]?.hint}</p>
       </div>
 
-      <button className="btn btn-primary btn-full" disabled={!deployable}
-        title={phase !== 'active' ? 'Waiting for the Game Master' : ''}
+      <button className="btn btn-primary btn-full" disabled={!deployable || capped}
+        title={phase !== 'active' ? 'Waiting for the Game Master' : capReason}
         onClick={() => onDeploy({ productPrice: draft.price, marketingSpend: draft.mkt, targetSegment: draft.segment })}>
         {busy && <span className="spinner" />} 🚀 Deploy Strategy
       </button>
+      {capped && <p className="form-error" style={{ marginTop: 10 }}>{capReason}</p>}
       <p className="muted" style={{ fontSize: 12, textAlign: 'center' }}>Each deploy = one market simulation tick</p>
     </div>
   );
