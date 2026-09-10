@@ -4,6 +4,9 @@
 
 let _user, _chartCtx, _chart, _lastState;
 
+/* Team id works for both stored shapes: { id } (frontend) and { teamId } (JWT). */
+function currentTeamId() { return String(_user?.teamId || _user?.id || ''); }
+
 /* ── Bootstrap ── */
 document.addEventListener('DOMContentLoaded', () => {
   _user = requireAuth('team');
@@ -34,29 +37,39 @@ function categoryBadgeClass(cat) {
 }
 
 /* ── Full state sync (called on poll) ── */
-async function syncFromState() {
-  if (!_lastState) await SS.refresh();
-  const state = SS.load();
+async function syncFromState(polledState) {
+  let state = polledState;
+  if (!state) {
+    if (!_lastState) state = await SS.refresh();
+    else state = SS.load();
+  }
   _lastState  = state;
   renderBMC();
 
-  const ms = state.marketState[_user.id];
-  if (!ms) return;
+  // Always reflect the game phase, even before market state exists for this
+  // team — otherwise the header stays stuck on "Waiting" when the game is live.
+  updatePhaseIndicator(state.gamePhase);
+
+  const teamId = currentTeamId();
+  const ms = state.marketState?.[teamId];
+  if (!ms) {
+    updateControlsFromState(null, state.gamePhase);
+    return;
+  }
 
   // Prune expired shocks
-  const myShocks = Shocks.getForTeam(_user.id, state.activeShocks);
+  const myShocks = Shocks.getForTeam(teamId, state.activeShocks || []);
 
-  updateMetricCards(ms);
+  updateMetricCards(ms, state);
   updateChart(ms);
   renderActiveShocks(myShocks, ms.category);
   renderEventLog(state, ms, myShocks);
   updateControlsFromState(ms, state.gamePhase);
-  updatePhaseIndicator(state.gamePhase);
 }
 
 /* ── Metric Cards ── */
 let _prevMetrics = {};
-function updateMetricCards(ms) {
+function updateMetricCards(ms, state) {
   const metrics = {
     revenue:    { el: 'metRevenue',    val: ms.totalRevenue,   fmt: v => Fmt.currency(v, true), color: 'var(--green)' },
     units:      { el: 'metUnits',      val: ms.totalUnitsSold, fmt: v => Fmt.units(v),           color: 'var(--cyan)' },
@@ -117,7 +130,8 @@ function updateMetricCards(ms) {
 function renderQualityBadge(ms, state) {
   const wrap = document.getElementById('qualityBadge');
   if (!wrap) return;
-  const entry = (state.quality || {})[_user.id];
+  const teamId = currentTeamId();
+  const entry = ((state && state.quality) || {})[teamId];
   const composite = entry ? entry.composite : (ms.qualityScore ?? null);
   const valEl = document.getElementById('metQuality');
   if (valEl) {
@@ -130,7 +144,7 @@ function renderQualityBadge(ms, state) {
   }
   const mult = Quality.multiplier(composite);
   const delta = Math.round((mult - 1) * 100);
-  const attrs = (state.qualityAttributes && state.qualityAttributes.length ? state.qualityAttributes : Quality.FALLBACK_ATTRS);
+  const attrs = (state?.qualityAttributes?.length ? state.qualityAttributes : Quality.FALLBACK_ATTRS);
   const scores = (entry && entry.scores) || {};
   const rows = attrs.map(a => {
     const s = scores[a.id];
@@ -398,10 +412,11 @@ async function deployStrategy() {
   btn.innerHTML = '<div class="spinner"></div> Simulating…';
 
   try {
-    await SS.request(`/api/teams/${_user.id}/deploy`, { method: 'POST', body: JSON.stringify({ productPrice: price, marketingSpend: mktSpend, targetSegment: segment }) });
+    const teamId = currentTeamId();
+    await SS.request(`/api/teams/${teamId}/deploy`, { method: 'POST', body: JSON.stringify({ productPrice: price, marketingSpend: mktSpend, targetSegment: segment }) });
     await SS.refresh();
     syncFromState();
-    Toast.success('Strategy Deployed!', `Tick ${SS.load().marketState[_user.id]?.tick || '?'} complete — check your metrics.`);
+    Toast.success('Strategy Deployed!', `Tick ${SS.load().marketState[teamId]?.tick || '?'} complete — check your metrics.`);
     floatEffect(document.getElementById('metRevenue'));
   } catch (error) { Toast.error('Deployment failed', error.message); }
   btn.disabled = false;
@@ -426,6 +441,15 @@ function updateControlsFromState(ms, phase) {
   const mktInput    = document.getElementById('mktInput');
   const deployBtn   = document.getElementById('deployBtn');
 
+  if (deployBtn) {
+    deployBtn.disabled = phase === 'lobby' || phase === 'ended' || !ms;
+    if (!ms)                  deployBtn.title = 'Loading your market state…';
+    else if (phase === 'lobby')  deployBtn.title = 'Waiting for Game Master to start';
+    else if (phase === 'ended')  deployBtn.title = 'Game has ended';
+    else if (phase === 'active') deployBtn.title = '';
+  }
+  if (!ms) return;
+
   if (priceSlider && ms.productPrice) {
     priceSlider.value = ms.productPrice;
     if (priceInput) priceInput.value = ms.productPrice;
@@ -437,12 +461,6 @@ function updateControlsFromState(ms, phase) {
     if (mktInput) mktInput.value = ms.marketingSpend;
     const disp = document.getElementById('mktDisplay');
     if (disp) disp.textContent = Fmt.currency(ms.marketingSpend);
-  }
-  if (deployBtn) {
-    deployBtn.disabled = phase === 'lobby' || phase === 'ended';
-    if (phase === 'lobby')  deployBtn.title = 'Waiting for Game Master to start';
-    if (phase === 'ended')  deployBtn.title = 'Game has ended';
-    if (phase === 'active') deployBtn.title = '';
   }
 }
 
@@ -464,7 +482,7 @@ function updatePhaseIndicator(phase) {
 /* ── BMC ── */
 function renderBMC() {
   const state = SS.load();
-  const ms = state.marketState[_user.id];
+  const ms = state.marketState?.[currentTeamId()];
   if (!ms?.bmc) return;
   const bmc = ms.bmc;
   const fields = ['keyPartners','keyActivities','keyResources','valueProposition','customerRelationships','channels','customerSegments','costStructure','revenueStreams'];
@@ -488,7 +506,7 @@ function openBMCEditor(field, label) {
 
   titleEl.textContent = 'Edit: ' + label;
   const state = SS.load();
-  const ms    = state.marketState[_user.id];
+  const ms    = state.marketState?.[currentTeamId()];
   input.value = ms?.bmc?.[field] || '';
   input.dataset.field = field;
 
@@ -511,7 +529,7 @@ async function saveBMC() {
   const field = input?.dataset.field;
   if (!field) return;
 
-  try { await SS.request(`/api/teams/${_user.id}/bmc`, { method: 'PATCH', body: JSON.stringify({ field, value: input.value }) }); await SS.refresh(); }
+  try { await SS.request(`/api/teams/${currentTeamId()}/bmc`, { method: 'PATCH', body: JSON.stringify({ field, value: input.value }) }); await SS.refresh(); }
   catch (error) { Toast.error('BMC update failed', error.message); return; }
 
   renderBMC();

@@ -433,8 +433,8 @@
       <!-- Business Model Canvas -->
       <div class="bmc-panel">
         <div class="bmc-header">
-          <div class="bmc-title">[ SYS.MODULE ] Business Model Canvas</div>
-          <div class="bmc-hint">Click any block to edit live</div>
+          <div class="bmc-title">Business Model Canvas</div>
+          <div class="bmc-hint">Click any card to edit live</div>
         </div>
 
         <!-- html-validate-disable prefer-native-element -->
@@ -444,7 +444,7 @@
             data-field="keyPartners" data-label="Key Partners"
             tabindex="0" role="button"
             aria-label="Edit Key Partners — click to open editor">
-                        <div class="bmc-cell-label">:: Key Partners</div>
+                        <div class="bmc-cell-label">Key Partners</div>
                         <div class="bmc-cell-content" id="bmc_keyPartners">Click to add…</div>
             <div class="bmc-edit-hint" aria-hidden="true">✏️ Edit</div>
           </div>
@@ -453,14 +453,14 @@
                         <div class="bmc-cell bmc-key-activities"
               data-field="keyActivities" data-label="Key Activities"
               tabindex="0" role="button" aria-label="Edit Key Activities">
-                          <div class="bmc-cell-label">:: Key Activities</div>
+                          <div class="bmc-cell-label">Key Activities</div>
                           <div class="bmc-cell-content" id="bmc_keyActivities">Click to add…</div>
               <div class="bmc-edit-hint" aria-hidden="true">✏️ Edit</div>
             </div>
                         <div class="bmc-cell bmc-key-resources"
               data-field="keyResources" data-label="Key Resources"
               tabindex="0" role="button" aria-label="Edit Key Resources">
-                          <div class="bmc-cell-label">:: Key Resources</div>
+                          <div class="bmc-cell-label">Key Resources</div>
                           <div class="bmc-cell-content" id="bmc_keyResources">Click to add…</div>
               <div class="bmc-edit-hint" aria-hidden="true">✏️ Edit</div>
             </div>
@@ -469,7 +469,7 @@
                       <div class="bmc-cell bmc-value-prop"
             data-field="valueProposition" data-label="Value Proposition"
             tabindex="0" role="button" aria-label="Edit Value Proposition — your most important block">
-                        <div class="bmc-cell-label">[ CORE ] Value Proposition</div>
+                        <div class="bmc-cell-label">Value Proposition</div>
                         <div class="bmc-cell-content" id="bmc_valueProposition">What unique problem do you solve? Who for? Why you?</div>
             <div class="bmc-edit-hint" aria-hidden="true">✏️ Edit</div>
           </div>
@@ -478,14 +478,14 @@
                         <div class="bmc-cell bmc-customer-rel"
               data-field="customerRelationships" data-label="Customer Relationships"
               tabindex="0" role="button" aria-label="Edit Customer Relationships">
-                          <div class="bmc-cell-label">:: Relationships</div>
+                          <div class="bmc-cell-label">Customer Relationships</div>
                           <div class="bmc-cell-content" id="bmc_customerRelationships">Click to add…</div>
               <div class="bmc-edit-hint" aria-hidden="true">✏️ Edit</div>
             </div>
                         <div class="bmc-cell bmc-channels"
               data-field="channels" data-label="Channels"
               tabindex="0" role="button" aria-label="Edit Channels">
-                          <div class="bmc-cell-label">:: Channels</div>
+                          <div class="bmc-cell-label">Channels</div>
                           <div class="bmc-cell-content" id="bmc_channels">Click to add…</div>
               <div class="bmc-edit-hint" aria-hidden="true">✏️ Edit</div>
             </div>
@@ -494,7 +494,7 @@
                       <div class="bmc-cell bmc-customer-seg"
             data-field="customerSegments" data-label="Customer Segments"
             tabindex="0" role="button" aria-label="Edit Customer Segments">
-                        <div class="bmc-cell-label">:: Segments</div>
+                        <div class="bmc-cell-label">Customer Segments</div>
                         <div class="bmc-cell-content" id="bmc_customerSegments">Click to add…</div>
             <div class="bmc-edit-hint" aria-hidden="true">✏️ Edit</div>
           </div>
@@ -502,7 +502,7 @@
                       <div class="bmc-cell bmc-cost"
             data-field="costStructure" data-label="Cost Structure"
             tabindex="0" role="button" aria-label="Edit Cost Structure">
-                        <div class="bmc-cell-label">:: Cost Structure</div>
+                        <div class="bmc-cell-label">Cost Structure</div>
                         <div class="bmc-cell-content" id="bmc_costStructure">Click to add…</div>
             <div class="bmc-edit-hint" aria-hidden="true">✏️ Edit</div>
           </div>
@@ -510,7 +510,7 @@
                       <div class="bmc-cell bmc-revenue-streams"
             data-field="revenueStreams" data-label="Revenue Streams"
             tabindex="0" role="button" aria-label="Edit Revenue Streams">
-                        <div class="bmc-cell-label">:: Revenue Streams</div>
+                        <div class="bmc-cell-label">Revenue Streams</div>
                         <div class="bmc-cell-content" id="bmc_revenueStreams">Click to add…</div>
             <div class="bmc-edit-hint" aria-hidden="true">✏️ Edit</div>
           </div>
@@ -663,7 +663,8 @@
         const user = SS.getCurrentUser();
         if (!user) return;
         const state = SS.load();
-        const ms = state.marketState?.[user.id];
+        const teamId = String(user.teamId || user.id || '');
+        const ms = state.marketState?.[teamId];
         if (ms) {
           checkBurnAlarm(ms);
           updateDeployCount(ms);

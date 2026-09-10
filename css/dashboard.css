@@ -522,39 +522,42 @@
 }
 .bmc-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   margin-bottom: 14px;
 }
 .bmc-title {
   font-family: var(--font-head);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
 }
-.bmc-hint { font-size: 11px; color: var(--text-muted); }
+.bmc-hint { font-size: 12px; color: var(--text-muted); }
 
+/* Sidebar is ~380px wide — a 5-column canvas is unreadable there.
+   Use an airy 2-column card list: value prop featured on top,
+   money blocks full-width at the bottom. */
 .bmc-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1.5fr 1fr 1fr;
-  grid-template-rows: auto auto;
-  gap: 6px;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
 }
 
 .bmc-cell {
   background: rgba(255,255,255,0.025);
   border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 8px;
-  padding: 10px;
+  border-radius: 10px;
+  padding: 12px 13px 24px;
   cursor: pointer;
-  transition: var(--transition);
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
   position: relative;
-  min-height: 80px;
+  min-height: 96px;
   overflow: hidden;
 }
 .bmc-cell:hover {
   border-color: rgba(0,245,255,0.35);
   background: rgba(0,245,255,0.04);
-  transform: scale(1.02);
+  transform: translateY(-1px);
 }
 .bmc-cell:focus {
   outline: 2px solid var(--cyan);
@@ -562,8 +565,8 @@
 }
 .bmc-edit-hint {
   position: absolute;
-  bottom: 6px; right: 8px;
-  font-size: 9px;
+  bottom: 8px; right: 10px;
+  font-size: 10px;
   color: var(--text-muted);
   opacity: 0;
   transition: opacity 0.2s;
@@ -571,38 +574,38 @@
 .bmc-cell:hover .bmc-edit-hint { opacity: 1; }
 
 .bmc-cell-label {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--cyan);
-  margin-bottom: 6px;
-  opacity: 0.85;
+  margin-bottom: 8px;
+  opacity: 0.9;
+  line-height: 1.4;
 }
 .bmc-cell-content {
-  font-size: 11px;
+  font-size: 12.5px;
   color: var(--text-secondary);
-  line-height: 1.5;
+  line-height: 1.6;
   word-break: break-word;
 }
 
-.bmc-value-prop {
-  background: rgba(0,245,255,0.04);
-  border-color: rgba(0,245,255,0.2);
-  grid-row: 1;
-}
-.bmc-value-prop .bmc-cell-label { color: var(--cyan); font-size: 10px; }
-
+/* Flatten the old desktop column wrappers so every card is a grid item. */
 .bmc-cell-col {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  grid-row: 1;
+  display: contents;
 }
-.bmc-cell-col .bmc-cell { min-height: calc(50% - 3px); flex: 1; }
 
-.bmc-cost             { grid-column: span 2; grid-row: 2; }
-.bmc-revenue-streams  { grid-column: span 3; grid-row: 2; background: rgba(0,255,136,0.03); border-color: rgba(0,255,136,0.12); }
+.bmc-value-prop {
+  grid-column: span 2;
+  order: -1;
+  background: rgba(0,245,255,0.05);
+  border-color: rgba(0,245,255,0.22);
+  min-height: 110px;
+}
+.bmc-value-prop .bmc-cell-label { color: var(--cyan); font-size: 11px; }
+
+.bmc-cost            { grid-column: span 2; }
+.bmc-revenue-streams { grid-column: span 2; background: rgba(0,255,136,0.03); border-color: rgba(0,255,136,0.14); }
 .bmc-revenue-streams .bmc-cell-label { color: var(--green); }
 
 /* BMC Textarea in Modal */
@@ -620,9 +623,12 @@
   .dash-col-controls { position: static; max-height: none; border-top: 1px solid var(--border); }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .bmc-grid { grid-template-columns: 1fr 1fr 1fr; }
-  .bmc-cell-col { flex-direction: row; }
+  .bmc-value-prop, .bmc-cost, .bmc-revenue-streams { grid-column: span 3; }
 }
 @media (max-width: 640px) {
   .kpi-grid { grid-template-columns: 1fr 1fr; }
   .dash-header-center { display: none; }
+  .bmc-grid { grid-template-columns: 1fr; }
+  .bmc-value-prop, .bmc-cost, .bmc-revenue-streams { grid-column: span 1; }
+  .bmc-cell { min-height: 0; }
 }
