@@ -1,41 +1,83 @@
-# Startup Survivor: The Business Model Gauntlet (2026 Edition)
+# ⚡ MarketShock - Interactive Startup Market Simulator
 
-Welcome to the **Situation Room**. 
+**MarketShock** is a real-time, multi-user web application designed for hackathons, startup bootcamps, and venture competitions. It allows participants to launch virtual startups, set product pricing, and track financial performance in a dynamic market environment.
 
-Startup Survivor is a high-pressure entrepreneurship simulation where teams acquire a startup idea, build its business model, and face unpredictable AI-driven market shocks. They must rapidly pivot, adapt their strategy, and defend their survival before VC-style judges.
-
-This is NOT a regular pitch competition. Teams don't pitch — they survive.
-
-## Features
-
-- **Live Market Simulation**: Real-time tick engine determining revenue, demand, and unit sales based on team pricing, marketing, and segment choices.
-- **Shock Arsenal**: 12 diverse market disruptions (Threats, Opportunities, Wildcards) that force teams to adapt or perish.
-- **Command Bunker**: Advanced Judge/Game Master control panel to orchestrate the chaos. Deploy shocks globally or surgically strike specific teams.
-- **Dynamic Leaderboard**: Auto-updating live leaderboard based on cumulative revenue performance.
-- **V-TAPP 2026 Theme**: A competitive, high-stakes atmosphere built for the VIT-AP University entrepreneurship techfest.
-
-## Technologies
-
-- Vanilla JavaScript (No frameworks)
-- Real-time `localStorage` based state synchronization
-- Custom CSS variable-based theming (Cinematic & Cyberpunk aesthetics)
-- Responsive layout with `css/style.css` design system
-
-## Setup
-
-1. **Serve locally**: Use any local web server (e.g. `python3 -m http.server 8000`)
-2. **Access**: 
-   - Landing/Team Login: `index.html`
-   - Team Dashboard: `dashboard.html`
-   - Admin/Command Bunker: `admin.html`
-3. **Admin Access**: The default Game Master passphrase is `gauntlet2026`.
-
-## Security
-
-- Role-based views
-- LocalStorage state compartmentalization
-- Passphrase brute-force lockout mechanisms
-- XSS prevention via HTML entity sanitization
+The twist: **Judges act as market administrators**, throwing real-time market shocks—such as tech booms, recessions, or data scandals—directly at startups, forcing founders to pivot, adjust pricing, and navigate market turbulence live.
 
 ---
-*Developed for the V-TAPP 2026 Techfest by the VIT-AP Entrepreneurship Club.*
+
+## 🛠️ Tech Stack
+
+* **Backend:** Node.js, Express.js
+* **Real-time Communication:** Socket.io (WebSockets)
+* **Frontend:** HTML5, JavaScript (ES6+), Tailwind CSS
+
+---
+
+## ✨ Features
+
+* **Participant Dashboard:** Launch a venture, configure product categories, adjust unit pricing on the fly, and view live updates on revenue, units sold, and conversion rates.
+* **Admin / Judge Control Panel:** Trigger market shocks in real time and monitor a live leaderboard of all participating startups.
+* **Dynamic Market Engine:** Built-in simulation cycle that updates metrics every 4 seconds based on price elasticity, demand shifts, and active market shocks.
+* **Real-Time Shocks:**
+* 🚀 **Tech Boom:** Increases market demand by 50%.
+* 📉 **Recession:** Cuts market demand and capital limits by 30%.
+* 🔒 **Data Privacy Scandal:** Halves conversion rates for Tech category startups.
+* ⚖️ **Market Stabilization:** Resets market conditions back to baseline.
+
+
+
+---
+
+## 📁 Project Structure
+
+```text
+market-shock/
+├── package.json        # Dependencies and startup scripts
+├── server.js          # Express server & WebSocket simulation engine
+├── .gitignore         # Excludes node_modules
+└── public/            # Client-side assets
+    ├── index.html     # Participant login / startup launch
+    ├── dashboard.html # Live startup management panel
+    └── admin.html     # Judge control panel & real-time leaderboard
+
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+Ensure you have [Node.js](https://nodejs.org/) (v14 or higher) installed on your system.
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/YOUR-USERNAME/YOUR-REPO.git
+cd YOUR-REPO
+
+```
+
+
+2. Install dependencies:
+```bash
+npm install
+
+```
+
+
+3. Start the application:
+```bash
+npm start
+
+```
+
+
+4. Open your browser and navigate to:
+* **Startup Participant Login:** `http://localhost:3000`
+* **Judge / Admin Portal:** `http://localhost:3000/admin.html`
+
+
+
