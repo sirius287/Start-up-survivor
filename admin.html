@@ -21,22 +21,11 @@
     .shock-card-admin {
       position: relative;
     }
-    .shock-card-admin::after {
-      content: attr(data-category);
-      position: absolute;
-      top: 10px; right: 10px;
-      font-family: var(--font-mono);
-      font-size: 8px;
-      font-weight: 800;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      opacity: 0.35;
-    }
 
     /* ── Game launch control panel ── */
     .launch-pad {
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px 16px;
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 8px 14px;
       background: rgba(0,0,0,0.3);
       border: 1px solid rgba(255,255,255,0.06);
       border-radius: var(--radius-md);
@@ -164,9 +153,9 @@
 
           <div class="phase-buttons">
             <button type="button" id="startGame"  class="btn btn-success btn-sm" aria-label="Start the game">▶ Start Game</button>
-            <button class="btn btn-ghost btn-sm d-none" type="button" id="pauseGame" aria-label="Pause the game">⏸ Pause</button>
-            <button class="btn btn-success btn-sm d-none" type="button" id="resumeGame" aria-label="Resume the game">▶ Resume</button>
-            <button class="btn btn-danger btn-sm d-none" type="button" id="endGame" aria-label="End the game">🏁 End Game</button>
+            <button class="btn btn-ghost btn-sm" type="button" id="pauseGame" aria-label="Pause the game" hidden>⏸ Pause</button>
+            <button class="btn btn-success btn-sm" type="button" id="resumeGame" aria-label="Resume the game" hidden>▶ Resume</button>
+            <button class="btn btn-danger btn-sm" type="button" id="endGame" aria-label="End the game" hidden>🏁 End Game</button>
           </div>
 
           <div class="launch-divider"></div>
@@ -192,14 +181,6 @@
     </div>
   </header>
 
-  <!-- Admin Ticker -->
-  <div class="admin-ticker" role="marquee" aria-label="Game master info ticker">
-    <div class="at-label">// INTEL</div>
-    <div class="at-scroll" id="adminTicker">
-      <!-- Rendered by JS -->
-    </div>
-  </div>
-
   <!-- ═══════════════════════════════════════
        STATS BAR
   ═══════════════════════════════════════ -->
@@ -213,11 +194,6 @@
       <div class="sb-item">
         <div class="sb-val text-red" id="statShocks">0</div>
         <div class="sb-label">Live Shocks</div>
-      </div>
-      <div class="sb-divider"></div>
-      <div class="sb-item">
-        <div class="sb-val text-amber" id="statTick">0</div>
-        <div class="sb-label">Max Tick</div>
       </div>
       <div class="sb-divider"></div>
       <div class="sb-item">
@@ -239,7 +215,6 @@
       <section class="admin-panel">
         <div class="admin-panel-header">
           <h1 class="admin-panel-title">🏢 Active Contenders</h1>
-          <p class="admin-panel-sub">Live performance across all registered teams. Auto-refreshes every 1.5s.</p>
         </div>
 
         <div class="table-wrapper">
@@ -251,14 +226,13 @@
                 <th scope="col">Sector</th>
                 <th scope="col">Revenue</th>
                 <th scope="col">Net P&amp;L</th>
-                <th scope="col">Budget</th>
                 <th scope="col">CVR</th>
                 <th scope="col">Quality</th>
                 <th scope="col">Quick Strike</th>
               </tr>
             </thead>
             <tbody id="teamsTableBody">
-              <tr><td colspan="8" class="empty-cell">No contenders yet. Share the arena URL to get teams registered.</td></tr>
+              <tr><td colspan="7" class="empty-cell">No contenders yet. Share the arena URL to get teams registered.</td></tr>
             </tbody>
           </table>
         </div>
@@ -268,7 +242,7 @@
       <section class="admin-panel overflow-hidden">
         <div class="transmission-header">
           <div class="tx-dot" aria-hidden="true"></div>
-          <span>Incoming Transmissions — Active Market Events</span>
+          <span>Active Market Events</span>
           <span class="badge badge-red ml-auto" id="shockCountBadge">0 Live</span>
         </div>
         <div id="activeShocksPanel" class="pt-12">
@@ -279,11 +253,7 @@
       <!-- Shock Arsenal -->
       <section class="admin-panel">
         <div class="admin-panel-header">
-          <h2 class="admin-panel-title">🧨 Shock Arsenal — Tactical Deployments</h2>
-          <p class="admin-panel-sub">
-            Select your weapon. Deploy All fires to every team simultaneously.
-            Target Team lets you surgically strike one squad.
-          </p>
+          <h2 class="admin-panel-title">Shock Arsenal</h2>
         </div>
 
         <!-- Filter -->
@@ -302,10 +272,7 @@
       <!-- Custom Shock -->
       <section class="admin-panel">
         <div class="admin-panel-header">
-          <h2 class="admin-panel-title">🔧 Custom Shock Builder</h2>
-          <p class="admin-panel-sub">
-            Design your own market event with custom modifiers and fire it instantly.
-          </p>
+          <h2 class="admin-panel-title">Custom Shock</h2>
         </div>
 
         <form id="customShockForm" novalidate autocomplete="off" class="p-0-20-20">
@@ -353,7 +320,7 @@
           </div>
 
           <button class="btn btn-danger btn-full mt-16" type="submit" aria-label="Deploy custom shock to all teams">
-            ⚡ Fire Custom Shock → All Teams
+            ⚡ Fire Custom Shock
           </button>
         </form>
       </section>
@@ -366,11 +333,7 @@
       <!-- Live Leaderboard -->
       <section class="admin-panel leaderboard-panel">
         <div class="admin-panel-header pb-12">
-          <h2 class="admin-panel-title">🏆 Live Leaderboard</h2>
-          <div class="admin-lb-header">
-            <span class="badge badge-green badge-pulse">AUTO-REFRESH</span>
-            <span class="admin-lb-sub">sorted by total revenue</span>
-          </div>
+          <h2 class="admin-panel-title">Live Leaderboard</h2>
         </div>
         <div id="leaderboard"  title="Live leaderboard rankings">
           <div class="lb-empty">No strategies deployed yet. Waiting for teams to enter the arena…</div>
@@ -380,26 +343,17 @@
       <!-- Shock History -->
       <section class="admin-panel">
         <div class="admin-panel-header">
-          <h2 class="admin-panel-title">📟 Shock Dispatch Log</h2>
+          <h2 class="admin-panel-title">Shock Log</h2>
         </div>
         <div id="shockHistoryPanel" class="shock-history-list">
           <div class="lb-empty">No shocks dispatched yet.</div>
-        </div>
-        <div class="p-8-16-16">
-          <button type="button" class="btn btn-ghost btn-sm btn-full" id="loadMoreHistory" aria-label="Load more shock history">
-            Load More →
-          </button>
         </div>
       </section>
 
       <!-- Product Quality Scoring -->
       <section class="admin-panel">
         <div class="admin-panel-header">
-          <h2 class="admin-panel-title">⭐ Product Quality — Judge Ratings</h2>
-          <p class="admin-panel-sub">
-            Rate each product 1–10 per attribute. The weighted composite feeds the market model
-            (±25% demand at the extremes, half that on conversion). Empty = not rated yet.
-          </p>
+          <h2 class="admin-panel-title">Product Quality</h2>
         </div>
         <div class="form-group quality-team-picker">
           <label class="form-label" for="qualityTeamSelect">Select Contender</label>
@@ -418,8 +372,7 @@
       <!-- Judge Scoring Notes -->
       <section class="admin-panel">
         <div class="admin-panel-header">
-          <h2 class="admin-panel-title">📝 Scoring Notes</h2>
-          <p class="admin-panel-sub">Private notes visible only to you. Saved locally.</p>
+          <h2 class="admin-panel-title">Scoring Notes</h2>
         </div>
         <textarea class="form-input judge-notes" id="judgeNotes"
           placeholder="Note pivot quality, BMC completeness, crisis response, storytelling…"
@@ -535,39 +488,13 @@
       pips.forEach((p,i) => { if (!p) return; p.className = 'tg-pip ' + (i < Math.min(n, 5) ? cls : ''); });
     }
 
-    /* ── Admin intel ticker ── */
-    const intelItems = [
-      'Real-time state syncs every 1.5s','Judges can surgically target individual teams',
-      'Custom shocks fire instantly','Each team tick = one strategy deployment',
-      'Market Crash lasts 5 ticks — use sparingly','Pandemic Surge: HealthTech +100% demand',
-      'Green Mandate: CleanTech +40% | others -10%','Reset button wipes ALL data permanently',
-      '3 failed judge logins → 60s lockout','BMC edits persist across page reloads',
-    ];
-    function buildAdminTicker() {
-      const el = document.getElementById('adminTicker');
-      if (!el) return;
-      const html = intelItems.map(t => `<span class="at-item">// <b>${t.split(' ').slice(0,2).join(' ')}</b> ${t.split(' ').slice(2).join(' ')}</span>`).join('');
-      el.innerHTML = html + html;
-    }
-
-    /* ── Category data attr on shock cards (for filter) ── */
-    function stampShockCategories() {
-      document.querySelectorAll('.shock-card-admin').forEach(card => {
-        if (!card.dataset.category) {
-          const shock = Shocks.CATALOG.find(s => s.id === card.dataset.shock);
-          if (shock) {
-            card.dataset.category = shock.category;
-            card.setAttribute('data-category', shock.category);
-          }
-        }
-      });
-    }
+    /* ── Admin intel ticker (kept minimal — header ticker was removed) ── */
+    function buildAdminTicker() { /* no-op: ticker element removed for a cleaner header */ }
 
     /* ── Poll for shock count badge + history + threat ── */
     setInterval(() => {
       renderShockHistory();
       updateThreatGauge();
-      stampShockCategories();
       const n = SS.load().activeShocks.length;
       const sc = document.getElementById('shockCountBadge');
       if (sc) {
@@ -577,7 +504,6 @@
     }, 2000);
 
     document.addEventListener('DOMContentLoaded', () => {
-      buildAdminTicker();
       renderShockHistory();
       updateThreatGauge();
     });

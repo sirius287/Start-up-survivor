@@ -42,7 +42,6 @@ function updateStatsBar(state) {
   el('statTeams')   && (el('statTeams').textContent   = state.teams.filter(t=>t.isActive).length);
   el('statShocks')  && (el('statShocks').textContent  = state.activeShocks.length);
   el('statPhase')   && (el('statPhase').textContent   = state.gamePhase.toUpperCase());
-  el('statTick')    && (el('statTick').textContent    = Math.max(...Object.values(state.marketState || {}).map(m => m.tick || 0), 0));
 }
 
 /* ── Teams Table ── */
@@ -52,16 +51,13 @@ function renderTeamsTable(state) {
 
   const teams = state.teams.filter(t => t.isActive);
   if (teams.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" class="empty-cell">No teams have joined yet. Share the URL to get started.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-cell">No teams have joined yet. Share the URL to get started.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = teams.map((t, rank) => {
     const ms = state.marketState[t.id] || {};
     const profit = ms.netProfit || 0;
-    const budget = ms.budget    || 0;
-    const maxBudget = ms.maxBudget || 1;
-    const budgetPct = Math.max(0, Math.min(100, (budget / maxBudget) * 100));
 
     return `
       <tr class="team-row">
@@ -73,12 +69,6 @@ function renderTeamsTable(state) {
         <td><span class="badge ${catBadge(t.category)}">${t.category}</span></td>
         <td class="td-revenue text-green">${Fmt.currency(ms.totalRevenue || 0, true)}</td>
         <td class="${profit>=0?'text-green':'text-red'}">${Fmt.currency(profit, true)}</td>
-        <td>
-          <div class="mini-bar-wrap">
-            <div class="mini-bar" style="width:${budgetPct}%;background:${budgetPct<20?'var(--red)':budgetPct<50?'var(--amber)':'var(--green)'}"></div>
-          </div>
-          <span style="font-size:11px;color:var(--text-muted)">${Fmt.currency(budget, true)}</span>
-        </td>
         <td class="text-cyan">${(ms.conversionRate||0).toFixed(1)}%</td>
         <td class="td-quality">${qualityCell(t.id, state)}</td>
         <td>
@@ -180,18 +170,16 @@ function renderShockArsenal() {
 
   grid.innerHTML = Shocks.CATALOG.map(shock => {
     const catColor = Shocks.categoryColor(shock.category);
-    const sevColor = Shocks.severityColor(shock.severity);
     const eff = shock.effect;
 
     return `
-      <div class="shock-card-admin" data-shock="${shock.id}" style="--cat-color:${catColor}">
+      <div class="shock-card-admin" data-shock="${shock.id}" data-category="${shock.category}" style="--cat-color:${catColor}">
         <div class="sca-header">
           <span class="sca-emoji">${shock.emoji}</span>
           <div class="sca-meta">
             <div class="sca-name">${shock.name}</div>
-            <span class="badge" style="background:${sevColor}22;color:${sevColor};border:1px solid ${sevColor}44;font-size:10px">${shock.severity}</span>
+            <span class="sca-cat" style="color:${catColor}">${shock.category} · ${shock.severity}</span>
           </div>
-          <div class="sca-cat" style="color:${catColor}">${shock.category}</div>
         </div>
         <p class="sca-desc">${shock.description}</p>
         <div class="sca-effects">
@@ -276,11 +264,14 @@ function renderGamePhaseUI(phase) {
   el.textContent = info.t;
   el.className   = `badge ${info.c}`;
 
-  // Show/hide buttons
-  document.getElementById('startGame')?.style.setProperty ('display', phase==='lobby' ? '' : 'none');
-  document.getElementById('pauseGame')?.style.setProperty ('display', phase==='active'? '' : 'none');
-  document.getElementById('resumeGame')?.style.setProperty('display', phase==='paused'? '' : 'none');
-  document.getElementById('endGame')?.style.setProperty   ('display', ['active','paused'].includes(phase) ? '' : 'none');
+  // Show/hide buttons — uses the `hidden` attribute as the single source of
+  // truth (matches the initial markup), so buttons can never get stuck by
+  // competing class/inline-style mechanisms.
+  const show = (id, visible) => document.getElementById(id)?.toggleAttribute('hidden', !visible);
+  show('startGame',  phase === 'lobby');
+  show('pauseGame',  phase === 'active');
+  show('resumeGame', phase === 'paused');
+  show('endGame',    ['active', 'paused'].includes(phase));
 }
 
 /* ── Custom Shock ── */
