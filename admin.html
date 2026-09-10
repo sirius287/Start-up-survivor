@@ -253,6 +253,7 @@
                 <th scope="col">Net P&amp;L</th>
                 <th scope="col">Budget</th>
                 <th scope="col">CVR</th>
+                <th scope="col">Quality</th>
                 <th scope="col">Quick Strike</th>
               </tr>
             </thead>
@@ -391,6 +392,29 @@
         </div>
       </section>
 
+      <!-- Product Quality Scoring -->
+      <section class="admin-panel">
+        <div class="admin-panel-header">
+          <h2 class="admin-panel-title">⭐ Product Quality — Judge Ratings</h2>
+          <p class="admin-panel-sub">
+            Rate each product 1–10 per attribute. The weighted composite feeds the market model
+            (±25% demand at the extremes, half that on conversion). Empty = not rated yet.
+          </p>
+        </div>
+        <div class="form-group quality-team-picker">
+          <label class="form-label" for="qualityTeamSelect">Select Contender</label>
+          <select class="form-input form-select" id="qualityTeamSelect" aria-label="Choose team to rate"></select>
+        </div>
+        <div id="qualityForm">
+          <div class="lb-empty">No teams have joined yet.</div>
+        </div>
+        <div class="p-8-16-16">
+          <button type="button" class="btn btn-primary btn-sm btn-full" id="saveQualityBtn" aria-label="Save product quality scores">
+            ⭐ Save Quality Scores
+          </button>
+        </div>
+      </section>
+
       <!-- Judge Scoring Notes -->
       <section class="admin-panel">
         <div class="admin-panel-header">
@@ -443,6 +467,8 @@
   <div id="toast-container"></div>
 
   <script src="js/app.js"></script>
+  <script src="js/quality.js"></script>
+  <script src="js/quality-admin.js"></script>
   <script src="js/market.js"></script>
   <script src="js/shocks.js"></script>
   <script src="js/admin.js"></script>

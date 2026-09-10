@@ -63,6 +63,7 @@ function updateMetricCards(ms) {
     conversion: { el: 'metConversion', val: ms.conversionRate, fmt: v => Fmt.percent(v),         color: 'var(--purple)' },
     price:      { el: 'metPrice',      val: ms.productPrice,   fmt: v => Fmt.currency(v),        color: 'var(--amber)' },
     demand:     { el: 'metDemand',     val: ms.demandIndex,    fmt: v => v.toFixed(1),            color: 'var(--cyan)' },
+    quality:    { el: 'metQuality',    val: ms.qualityScore ?? null, fmt: v => v === null ? '—' : `★ ${Number(v).toFixed(1)}`, color: 'var(--amber)' },
     budget:     { el: 'metBudget',     val: ms.budget,         fmt: v => Fmt.currency(v, true),  color: ms.budget < ms.maxBudget * 0.2 ? 'var(--red)' : 'var(--green)' },
   };
 
@@ -87,7 +88,10 @@ function updateMetricCards(ms) {
     }
   }
 
-  _prevMetrics = { revenue: ms.totalRevenue, units: ms.totalUnitsSold, conversion: ms.conversionRate, price: ms.productPrice, demand: ms.demandIndex, budget: ms.budget };
+  _prevMetrics = { revenue: ms.totalRevenue, units: ms.totalUnitsSold, conversion: ms.conversionRate, price: ms.productPrice, demand: ms.demandIndex, quality: ms.qualityScore ?? null, budget: ms.budget };
+
+  // Judge-rated product quality (updates via poll)
+  renderQualityBadge(ms, state);
 
   // Budget health bar
   const pct = Math.max(0, Math.min(100, (ms.budget / ms.maxBudget) * 100));
@@ -107,6 +111,40 @@ function updateMetricCards(ms) {
     profitEl.textContent = Fmt.currency(ms.netProfit, true);
     profitEl.style.color = ms.netProfit >= 0 ? 'var(--green)' : 'var(--red)';
   }
+}
+
+/* ── Judge-rated Product Quality (read-only for teams) ── */
+function renderQualityBadge(ms, state) {
+  const wrap = document.getElementById('qualityBadge');
+  if (!wrap) return;
+  const entry = (state.quality || {})[_user.id];
+  const composite = entry ? entry.composite : (ms.qualityScore ?? null);
+  const valEl = document.getElementById('metQuality');
+  if (valEl) {
+    if (composite === null || composite === undefined) { valEl.textContent = '—'; valEl.style.color = 'var(--text-muted)'; }
+    else { valEl.textContent = `★ ${Number(composite).toFixed(1)}`; valEl.style.color = Quality.color(composite); }
+  }
+  if (composite === null || composite === undefined) {
+    wrap.innerHTML = `<span class=\"qb-empty\">⭐ Awaiting judge product-rating</span>`;
+    return;
+  }
+  const mult = Quality.multiplier(composite);
+  const delta = Math.round((mult - 1) * 100);
+  const attrs = (state.qualityAttributes && state.qualityAttributes.length ? state.qualityAttributes : Quality.FALLBACK_ATTRS);
+  const scores = (entry && entry.scores) || {};
+  const rows = attrs.map(a => {
+    const s = scores[a.id];
+    const dots = s === undefined
+      ? '<span class=\"qb-na\">not rated</span>'
+      : `<span class=\"qb-dots\" aria-hidden=\"true\">${'●'.repeat(s)}${'○'.repeat(10 - s)}</span> <span class=\"qb-score\">${s}/10</span>`;
+    return `<div class=\"qb-row\"><span class=\"qb-label\">${a.label} <em>×${a.weight}</em></span>${dots}</div>`;
+  }).join('');
+  wrap.innerHTML = `
+    <div class=\"qb-head\">
+      <span class=\"qb-stars\">★ ${Number(composite).toFixed(1)}<span class=\"qb-max\">/10</span></span>
+      <span class=\"qb-mult\" style=\"color:${delta >= 0 ? 'var(--green)' : 'var(--red)'}\">${delta >= 0 ? '+' : ''}${delta}% demand</span>
+    </div>
+    <div class=\"qb-attrs\">${rows}</div>`;
 }
 
 /* ── Revenue Chart (Canvas) ── */

@@ -85,3 +85,17 @@ CREATE TABLE IF NOT EXISTS shock_history (
   id BIGSERIAL PRIMARY KEY, instance_id TEXT NOT NULL UNIQUE REFERENCES shocks(instance_id) ON DELETE CASCADE, deployed_at TIMESTAMPTZ NOT NULL,
   resolved_at TIMESTAMPTZ, target_team_id BIGINT REFERENCES teams(id) ON DELETE SET NULL, deployed_by BIGINT REFERENCES users(id) ON DELETE SET NULL
 );
+
+CREATE TABLE IF NOT EXISTS judge_scores (
+  id BIGSERIAL PRIMARY KEY,
+  team_id BIGINT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  attribute TEXT NOT NULL,
+  score SMALLINT NOT NULL CHECK (score BETWEEN 1 AND 10),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(team_id, attribute)
+);
+CREATE INDEX IF NOT EXISTS judge_scores_team_idx ON judge_scores(team_id);
+
+ALTER TABLE team_market_state ADD COLUMN IF NOT EXISTS quality_score NUMERIC(4,2);
+ALTER TABLE team_market_state ADD COLUMN IF NOT EXISTS quality_updated_at TIMESTAMPTZ;
+ALTER TABLE market_history ADD COLUMN IF NOT EXISTS quality NUMERIC(4,2);

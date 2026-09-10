@@ -1,3 +1,4 @@
+const { qualityMultiplier } = require('./quality');
 const CATEGORIES = {
   FinTech: { baseDemand: 70, baseConversion: 8.5, basePrice: 999, budgetMonthly: 80000 },
   HealthTech: { baseDemand: 65, baseConversion: 7.2, basePrice: 1499, budgetMonthly: 100000 },
@@ -16,12 +17,20 @@ function runTick(state, shocks, strategy) {
   const marketingRatio = Math.min(strategy.marketingSpend / 10000, 3);
   const [segmentMultiplier, segmentConversion] = segments[strategy.targetSegment];
   const priceElasticity = Math.pow(c.basePrice / strategy.productPrice, 0.6);
-  const demand = Math.max(0, (c.baseDemand + marketingRatio * 8) * demandMultiplier * priceElasticity * segmentMultiplier + (Math.random() - 0.4) * 8);
-  const conversion = Math.max(0.1, Math.min(30, (c.baseConversion + marketingRatio * 1.5) * conversionMultiplier * segmentConversion + (Math.random() - 0.4) * 1.5));
+  // Judge-rated product quality (1-10 weighted composite). Unrated teams
+  // pass null and get a neutral multiplier of 1 — model behaves as before.
+  // NB: explicit null/undefined/'' check — Number(null) is 0, not NaN.
+  const rawQuality = strategy.quality;
+  const qualityInput = (rawQuality === null || rawQuality === undefined || rawQuality === '') ? NaN : Number(rawQuality);
+  const quality = Number.isFinite(qualityInput) ? Math.min(10, Math.max(1, qualityInput)) : null;
+  const qualityMultiplierValue = qualityMultiplier(quality);
+  const qualityConversionMultiplier = 1 + (qualityMultiplierValue - 1) * 0.5;
+  const demand = Math.max(0, (c.baseDemand + marketingRatio * 8) * demandMultiplier * priceElasticity * segmentMultiplier * qualityMultiplierValue + (Math.random() - 0.4) * 8);
+  const conversion = Math.max(0.1, Math.min(30, (c.baseConversion + marketingRatio * 1.5) * conversionMultiplier * segmentConversion * qualityConversionMultiplier + (Math.random() - 0.4) * 1.5));
   const units = Math.floor(demand * 200 * conversion / 100);
   const revenue = units * strategy.productPrice;
   const cost = strategy.marketingSpend + Number(state.burn_rate ?? state.burnRate ?? 0) + c.budgetMonthly * 0.05;
   const budget = Math.max(0, state.budget - cost - cost * (budgetMultiplier - 1) + revenue * 0.1);
-  return { tick: state.tick + 1, budget: Number(budget.toFixed(2)), productPrice: strategy.productPrice, marketingSpend: strategy.marketingSpend, targetSegment: strategy.targetSegment, demandIndex: Number(demand.toFixed(2)), conversionRate: Number(conversion.toFixed(2)), unitsSold: units, units, totalUnitsSold: Number(state.total_units_sold ?? state.totalUnitsSold ?? 0) + units, totalRevenue: Number((Number(state.total_revenue ?? state.totalRevenue ?? 0) + revenue).toFixed(2)), totalCost: Number((Number(state.total_cost ?? state.totalCost ?? 0) + cost).toFixed(2)), netProfit: Number((Number(state.total_revenue ?? state.totalRevenue ?? 0) + revenue - Number(state.total_cost ?? state.totalCost ?? 0) - cost).toFixed(2)), lastDeployedAt: new Date(), deployCount: state.deploy_count + 1, demand, conversion, revenue, cost, appliedShocks: shocks.map(s => s.shock_id) };
+  return { tick: state.tick + 1, budget: Number(budget.toFixed(2)), productPrice: strategy.productPrice, marketingSpend: strategy.marketingSpend, targetSegment: strategy.targetSegment, demandIndex: Number(demand.toFixed(2)), conversionRate: Number(conversion.toFixed(2)), unitsSold: units, units, totalUnitsSold: Number(state.total_units_sold ?? state.totalUnitsSold ?? 0) + units, totalRevenue: Number((Number(state.total_revenue ?? state.totalRevenue ?? 0) + revenue).toFixed(2)), totalCost: Number((Number(state.total_cost ?? state.totalCost ?? 0) + cost).toFixed(2)), netProfit: Number((Number(state.total_revenue ?? state.totalRevenue ?? 0) + revenue - Number(state.total_cost ?? state.totalCost ?? 0) - cost).toFixed(2)), lastDeployedAt: new Date(), deployCount: state.deploy_count + 1, demand, conversion, revenue, cost, quality: quality, qualityMultiplier: Number(qualityMultiplierValue.toFixed(4)), appliedShocks: shocks.map(s => s.shock_id) };
 }
 module.exports = { CATEGORIES, initialState, runTick };

@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderShockArsenal();
   setupGameControls();
   setupCustomShock();
+  setupQualityPanel();
   setupLogout();
   Poller.start(onStateChange);
 });
@@ -31,6 +32,7 @@ function renderAll() {
   renderLeaderboard(state);
   renderActiveShocksPanel(state);
   renderGamePhaseUI(state.gamePhase);
+  renderQualityPanel(state);
   updateStatsBar(state);
 }
 
@@ -78,6 +80,7 @@ function renderTeamsTable(state) {
           <span style="font-size:11px;color:var(--text-muted)">${Fmt.currency(budget, true)}</span>
         </td>
         <td class="text-cyan">${(ms.conversionRate||0).toFixed(1)}%</td>
+        <td class="td-quality">${qualityCell(t.id, state)}</td>
         <td>
           <div class="table-actions">
             ${Shocks.CATALOG.slice(0,3).map(s => `<button class="btn btn-sm btn-ghost shock-quick-btn" data-shock="${s.id}" data-team="${t.id}" title="${s.name}">${s.emoji}</button>`).join('')}

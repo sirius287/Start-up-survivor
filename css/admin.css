@@ -422,6 +422,31 @@
 .custom-shock-grid .btn { margin: 0 20px; }
 
 /* ── Judge Notes ── */
+.quality-team-picker { padding: 0 16px; }
+#qualityForm { padding: 0 16px; }
+.q-summary {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding: 10px 12px; margin-bottom: 12px;
+  background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.q-summary-score { font-size: 18px; font-weight: 800; }
+.q-preview-tag { font-style: normal; font-size: 10px; color: var(--text-muted); font-weight: 600; }
+.q-summary-mult { font-family: var(--font-mono); font-size: 11px; font-weight: 700; }
+.q-attr { margin-bottom: 14px; }
+.q-weight { color: var(--text-muted); font-size: 10px; font-weight: 600; }
+.q-value { color: var(--amber); }
+.q-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.q-clear-row { display: flex; justify-content: flex-end; margin-top: 2px; }
+.q-clear { font-size: 10px; padding: 2px 8px; }
+.td-quality { text-align: center; }
+.q-chip {
+  background: rgba(255,170,0,0.08); border: 1px solid rgba(255,170,0,0.3);
+  border-radius: 100px; padding: 2px 10px; cursor: pointer;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+}
+.q-chip:hover { background: rgba(255,170,0,0.18); }
+.q-unrated { color: var(--text-muted); font-size: 12px; }
 .judge-notes {
   margin: 0 16px;
   width: calc(100% - 32px);
