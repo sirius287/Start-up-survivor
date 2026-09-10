@@ -84,7 +84,13 @@ function updateMetricCards(ms, state) {
     const el = document.getElementById(m.el);
     if (!el) continue;
     const prev = _prevMetrics[key] ?? m.val;
-    animateNumber(el, prev, m.val, 500, v => m.fmt(v));
+    // Don't restart the count-up animation when the value didn't move — with
+    // a 1.5s poll that keeps every number in perpetual motion.
+    if (_prevMetrics[key] === undefined || prev !== m.val) {
+      animateNumber(el, prev, m.val, 500, v => m.fmt(v));
+    } else if (el.textContent !== m.fmt(m.val)) {
+      el.textContent = m.fmt(m.val);
+    }
     el.style.color = m.color;
 
     // Delta indicator
@@ -250,17 +256,42 @@ function drawLine(ctx, data, W, H, color, filled) {
 
 /* ── Active Shocks Banner ── */
 let _shownShockIds = new Set();
+let _shockRenderSig = null;
+function shockListSignature(shocks) {
+  return shocks.map(s => `${s.instanceId}@${s.expiresAt}`).sort().join('|');
+}
 function renderActiveShocks(shocks, category) {
   const container = document.getElementById('shockBanner');
   const noShock   = document.getElementById('noShock');
   if (!container) return;
 
   if (shocks.length === 0) {
+    _shockRenderSig = null;
+    _shownShockIds.clear();
     container.innerHTML = '';
     if (noShock) noShock.style.display = 'flex';
     return;
   }
   if (noShock) noShock.style.display = 'none';
+
+  // Toast once per genuinely-new shock, then forget ids that expired so the
+  // set can't grow for the whole session.
+  for (const shock of shocks) {
+    if (!_shownShockIds.has(shock.instanceId)) {
+      _shownShockIds.add(shock.instanceId);
+      Toast.shock(`⚡ ${shock.name}`, shock.description);
+    }
+  }
+  _shownShockIds = new Set(shocks.map(s => s.instanceId));
+
+  // Don't rebuild the DOM when nothing changed. Rewriting innerHTML replays
+  // the shockSlideIn entrance animation (max-height 0→200px bounce) on every
+  // 1.5s poll, so the whole panel — and everything below it — jumps nonstop
+  // while any shock is active. Countdown text keeps ticking via the 1s
+  // updateShockTimers interval, which needs no re-render.
+  const sig = shockListSignature(shocks);
+  if (sig === _shockRenderSig) return;
+  _shockRenderSig = sig;
 
   container.innerHTML = shocks.map(shock => {
     const effect = { ...shock.effect };
@@ -269,12 +300,6 @@ function renderActiveShocks(shocks, category) {
     const timeLeft = Shocks.timeLeft(shock);
     const catColor = Shocks.categoryColor(shock.category);
     const sevColor = Shocks.severityColor(shock.severity);
-
-    // Show toast only once per shock
-    if (!_shownShockIds.has(shock.instanceId)) {
-      _shownShockIds.add(shock.instanceId);
-      Toast.shock(`⚡ ${shock.name}`, shock.description);
-    }
 
     return `
       <div class="shock-card shock-${shock.category}" style="--shock-color:${catColor}">
