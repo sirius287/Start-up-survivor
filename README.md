@@ -1,83 +1,41 @@
-# ⚡ MarketShock - Interactive Startup Market Simulator
+# Startup Survivor
 
-**MarketShock** is a real-time, multi-user web application designed for hackathons, startup bootcamps, and venture competitions. It allows participants to launch virtual startups, set product pricing, and track financial performance in a dynamic market environment.
+A real-time market simulation game for hackathons and startup events. Teams run startups, set prices, and survive market shocks thrown by the game master.
 
-The twist: **Judges act as market administrators**, throwing real-time market shocks—such as tech booms, recessions, or data scandals—directly at startups, forcing founders to pivot, adjust pricing, and navigate market turbulence live.
+## Quick Start
 
----
+Requires Python 3.
 
-## 🛠️ Tech Stack
-
-* **Backend:** Node.js, Express.js
-* **Real-time Communication:** Socket.io (WebSockets)
-* **Frontend:** HTML5, JavaScript (ES6+), Tailwind CSS
-
----
-
-## ✨ Features
-
-* **Participant Dashboard:** Launch a venture, configure product categories, adjust unit pricing on the fly, and view live updates on revenue, units sold, and conversion rates.
-* **Admin / Judge Control Panel:** Trigger market shocks in real time and monitor a live leaderboard of all participating startups.
-* **Dynamic Market Engine:** Built-in simulation cycle that updates metrics every 4 seconds based on price elasticity, demand shifts, and active market shocks.
-* **Real-Time Shocks:**
-* 🚀 **Tech Boom:** Increases market demand by 50%.
-* 📉 **Recession:** Cuts market demand and capital limits by 30%.
-* 🔒 **Data Privacy Scandal:** Halves conversion rates for Tech category startups.
-* ⚖️ **Market Stabilization:** Resets market conditions back to baseline.
-
-
-
----
-
-## 📁 Project Structure
-
-```text
-market-shock/
-├── package.json        # Dependencies and startup scripts
-├── server.js          # Express server & WebSocket simulation engine
-├── .gitignore         # Excludes node_modules
-└── public/            # Client-side assets
-    ├── index.html     # Participant login / startup launch
-    ├── dashboard.html # Live startup management panel
-    └── admin.html     # Judge control panel & real-time leaderboard
-
-```
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-Ensure you have [Node.js](https://nodejs.org/) (v14 or higher) installed on your system.
-
-### Installation
-
-1. Clone the repository:
 ```bash
-git clone https://github.com/YOUR-USERNAME/YOUR-REPO.git
-cd YOUR-REPO
-
+python3 -m http.server 8000
 ```
 
+Open http://localhost:8000 in your browser.
 
-2. Install dependencies:
-```bash
-npm install
+## How It Works
+
+1. **Teams** log in with a startup name and pick a category (Tech, Health, Finance, etc.)
+2. **The game master** logs in as admin and throws market shocks at players
+3. Teams adjust pricing and watch their revenue react to market conditions
+4. Last team standing wins
+
+Shock types include market crashes, viral booms, regulatory changes, and competitor entries. Each shock changes demand multipliers that feed into team revenue on every tick.
+
+## Project Structure
 
 ```
-
-
-3. Start the application:
-```bash
-npm start
-
+├── index.html          Landing page, team login
+├── dashboard.html      Team dashboard, live metrics
+├── admin.html          Game master controls
+├── css/                Stylesheets
+├── js/                 Game engine, state sync, shock logic
+└── README.md
 ```
 
+## Tech
 
-4. Open your browser and navigate to:
-* **Startup Participant Login:** `http://localhost:3000`
-* **Judge / Admin Portal:** `http://localhost:3000/admin.html`
+Vanilla HTML, CSS, and JavaScript. No build step, no dependencies. State lives in localStorage and syncs across tabs in the same browser. For multi-device play, serve the files from one machine and open the page from other devices on the same network.
 
+## License
 
-
+MIT
