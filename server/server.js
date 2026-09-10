@@ -113,7 +113,7 @@ app.get('/api/teams/:teamId/stats', requireAuth, async (req, res, next) => { try
   if (req.user.role === 'team' && teamId !== idOf(req.user.teamId)) return fail(res, 403, 'FORBIDDEN', 'You can only view your own stats.');
   const t = await pool.query('SELECT * FROM teams WHERE id=$1 AND is_active=true', [teamId]);
   if (!t.rows[0]) return fail(res, 404, 'TEAM_NOT_FOUND', 'Team not found.');
-  const msr = await pool.query('SELECT * FROM team_market_state WHERE team_id=$1', [teamId]);
+  const msr = await pool.query(`SELECT m.*, jsonb_build_object('keyPartners',b.key_partners,'keyActivities',b.key_activities,'keyResources',b.key_resources,'valueProposition',b.value_proposition,'customerRelationships',b.customer_relationships,'channels',b.channels,'customerSegments',b.customer_segments,'costStructure',b.cost_structure,'revenueStreams',b.revenue_streams) AS bmc FROM team_market_state m LEFT JOIN business_model_canvas b ON b.team_id=m.team_id WHERE m.team_id=$1`, [teamId]);
   const m = msr.rows[0];
   const hourly = await hourlyDeployCount(pool, teamId);
   const ticks = m?.deploy_count || 0;
@@ -122,7 +122,7 @@ app.get('/api/teams/:teamId/stats', requireAuth, async (req, res, next) => { try
   const rows = (await pool.query('SELECT h.*, t.team_name, t.startup_name FROM market_history h JOIN teams t ON t.id=h.team_id WHERE h.team_id=$1 ORDER BY h.tick DESC LIMIT 100', [teamId])).rows;
   const cat = CATEGORIES[m?.category || t.rows[0].category];
   const burn = Number(m?.burn_rate || 0), fee = cat ? cat.budgetMonthly * 0.05 : 0;
-  ok(res, { team: team(t.rows[0]), market: m ? marketState(m) : null, allowance: allowanceFor(ticks, hourly.count),
+  ok(res, { team: team(t.rows[0]), market: m ? marketState(m, m.bmc) : null, allowance: allowanceFor(ticks, hourly.count),
     spend: { marketing: agg.mkt, burn: burn * ticks, fees: fee * ticks, total: agg.mkt + burn * ticks + fee * ticks },
     totals: { revenue: agg.rev, units: agg.units, avgPrice: agg.avgPrice, deployments: agg.n },
     segmentMix: seg, deployments: rows.map(serializeDeployment) });

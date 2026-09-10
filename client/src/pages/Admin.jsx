@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { api, fmt, getCurrentUser, PHASE_LABEL } from '../api.js';
+import { api, fmt, getCurrentUser, BMC_FIELDS, PHASE_LABEL } from '../api.js';
 import { Modal, ShockCard, Toasts, TopBar } from '../components.jsx';
 import { usePoll, useToasts } from '../hooks.js';
 
@@ -246,6 +246,15 @@ function TeamDetail({ team, toast, close }) {
           <div className="q-row"><span className="ql">🧾 Market fees</span><span className="mono">{fmt.currency(stats.spend.fees, true)}</span></div>
           <div className="q-row"><span className="ql"><b>Total spend</b></span><span className="mono" style={{ color: 'var(--red)' }}><b>{fmt.currency(stats.spend.total, true)}</b></span></div>
           <div className="q-row"><span className="ql">Avg price · segment mix</span><span className="mono">{fmt.currency(stats.totals.avgPrice)} · {(stats.segmentMix || []).map((s) => `${s.target_segment || '?'}×${s.n}`).join(' ') || '—'}</span></div>
+          <div className="panel-h" style={{ marginBottom: 8, marginTop: 8 }}>🧱 Business Model Canvas <span className="muted" style={{ textTransform: 'none', letterSpacing: 0 }}>— read-only</span></div>
+          <div className="bmc-grid">
+            {BMC_FIELDS.map(([f, label]) => (
+              <div key={f} className="bmc-cell" style={{ cursor: 'default' }}>
+                <h4>{label}</h4>
+                <p>{stats.market?.bmc?.[f] ? stats.market.bmc[f] : <span className="muted">—</span>}</p>
+              </div>
+            ))}
+          </div>
           <div className="panel-h" style={{ marginBottom: 8, marginTop: 8 }}>📋 Deployment history</div>
           {(stats.deployments?.length ?? 0) === 0 && <div className="empty-note">No deployments yet.</div>}
           {(stats.deployments || []).map((d) => (
