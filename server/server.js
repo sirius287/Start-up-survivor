@@ -17,7 +17,17 @@ const app = express();
 // express-rate-limit reads the real client IP from X-Forwarded-For instead of
 // throwing ERR_ERL_UNEXPECTED_X_FORWARDED_FOR.
 app.set('trust proxy', 1);
-const frontend = path.join(__dirname, '..');
+const frontend = (() => {
+  // Prefer the React build when present (client/dist), otherwise fall back to
+  // the legacy static pages at the repo root.
+  const dist = path.join(__dirname, '..', 'client', 'dist');
+  try {
+    require('fs').accessSync(path.join(dist, 'index.html'));
+    return dist;
+  } catch {
+    return path.join(__dirname, '..');
+  }
+})();
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '100kb' }));
 app.use(cookieParser());

@@ -8,6 +8,8 @@
   "scripts": {
     "start": "node server/server.js",
     "dev": "node --watch server/server.js",
+    "build:client": "npm run build --prefix client",
+    "dev:client": "npm run dev --prefix client",
     "test": "node --check api/index.js && node --check server/server.js && node --check server/services/market.js && node --check server/services/shocks.js && node --check server/services/state.js && node --check js/app.js && node --check js/dashboard.js && node --check js/admin.js && node --check js/shocks.js"
   },
   "engines": { "node": ">=20" },
