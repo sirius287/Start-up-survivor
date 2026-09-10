@@ -31,8 +31,15 @@ const SS = {
     sessionStorage.removeItem(this.CURRENT_KEY);
   },
 
-  async loginTeam(details) {
+  async registerTeam(details) {
     const data = await this.request('/api/auth/team/register', { method: 'POST', body: JSON.stringify(details) });
+    const user = { ...data.team, id: String(data.teamId), role: 'team' };
+    this.setCurrentUser(user);
+    return user;
+  },
+
+  async loginTeam({ teamName, password }) {
+    const data = await this.request('/api/auth/team/login', { method: 'POST', body: JSON.stringify({ teamName, password }) });
     const user = { ...data.team, id: String(data.teamId), role: 'team' };
     this.setCurrentUser(user);
     return user;

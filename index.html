@@ -285,9 +285,28 @@
     .pw-toggle:hover { color: var(--text-primary); }
     .lockout-msg { color: var(--red); font-size: 12px; font-family: var(--font-mono); text-align: center; padding: 8px; }
 
+    /* Team login secondary CTA + modal switch links */
+    .btn-arena-secondary {
+      background: transparent;
+      border: 1.5px solid rgba(0,245,255,0.45);
+      color: var(--cyan);
+    }
+    .btn-arena-secondary:hover {
+      border-color: var(--cyan);
+      background: rgba(0,245,255,0.1);
+      transform: translateY(-3px);
+      box-shadow: 0 0 30px rgba(0,245,255,0.25);
+    }
+    .modal-switch { font-size: 13px; color: var(--text-muted); text-align: center; }
+    .modal-switch button {
+      background: none; border: none; padding: 0;
+      color: var(--cyan); font-size: 13px; font-weight: 700;
+      cursor: pointer; text-decoration: underline; text-underline-offset: 3px;
+    }
+    .modal-switch button:hover { color: #fff; }
+
     /* Ticker */
-    .ticker-tape {
-      position: fixed; bottom: 0; left: 0; right: 0; height: 34px;
+    .ticker-tape {      position: fixed; bottom: 0; left: 0; right: 0; height: 34px;
       background: rgba(0,0,0,0.92); border-top: 1px solid rgba(255,68,68,0.16);
       overflow: hidden; z-index: 50; display: flex; align-items: center;
     }
@@ -409,13 +428,20 @@
 
     <!-- CTAs -->
     <div class="arena-ctas reveal">
-      <button type="button" class="btn-arena btn-arena-primary mag-btn" id="teamLoginBtn" aria-label="Enter as a team participant">
+      <button type="button" class="btn-arena btn-arena-primary mag-btn" id="teamRegisterBtn" aria-label="Register a new team">
         <!-- Sword SVG icon -->
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M2 21l5.5-5.5"/>
           <path d="M20 16l2-2-7-7-2 2"/>
         </svg>
-        Enter the Arena
+        Register Squad
+      </button>
+      <button type="button" class="btn-arena btn-arena-secondary mag-btn" id="teamLoginBtn" aria-label="Log in as a returning team">
+        <!-- Key SVG icon -->
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+        </svg>
+        Team Login
       </button>
       <button type="button" class="btn-arena btn-arena-judge mag-btn" id="judgeLoginBtn" aria-label="Judge panel login">
         <!-- Scales of Justice SVG -->
@@ -576,7 +602,7 @@
   </section>
 
   <!-- ════════════════════════════════════════════════
-       TEAM LOGIN MODAL
+       TEAM REGISTER MODAL
   ════════════════════════════════════════════════ -->
   <div class="modal-overlay" id="teamModal" role="dialog" aria-modal="true" aria-labelledby="teamModalTitle">
     <div class="modal">
@@ -589,7 +615,7 @@
         </h2>
         <button type="button" class="modal-close" id="teamModalClose" aria-label="Close">✕</button>
       </div>
-      <form id="teamLoginForm" novalidate autocomplete="off">
+      <form id="teamRegisterForm" novalidate autocomplete="off">
         <div class="flex-col gap-16">
           <div class="form-group">
             <label class="form-label" for="teamNameInput">Squad / Team Name <span class="text-red">*</span></label>
@@ -627,10 +653,53 @@
               placeholder='"The OS for Indian healthcare payments"' autocomplete="off" data-sanitize="text">
           </div>
           <div id="teamFormError" class="form-error hidden" role="alert" aria-live="polite"></div>
-          <button class="btn btn-primary btn-full mag-btn btn-large-bold" type="submit" id="teamSubmitBtn">
+          <button class="btn btn-primary btn-full mag-btn btn-large-bold" type="submit" id="teamRegisterSubmitBtn">
             Enter the Gauntlet
           </button>
-          <p class="modal-note">Same team name = resume existing session.</p>
+          <p class="modal-switch">Already registered? <button type="button" id="switchToLogin">Log in here</button></p>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       TEAM LOGIN MODAL (returning squads)
+  ════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="teamLoginModal" role="dialog" aria-modal="true" aria-labelledby="teamLoginModalTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="teamLoginModalTitle">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+          </svg>
+          Squad Login
+        </h2>
+        <button type="button" class="modal-close" id="teamLoginModalClose" aria-label="Close">✕</button>
+      </div>
+      <form id="teamLoginForm" novalidate autocomplete="off">
+        <div class="flex-col gap-16">
+          <div class="form-group">
+            <label class="form-label" for="loginTeamNameInput">Squad / Team Name <span class="text-red">*</span></label>
+            <input class="form-input" type="text" id="loginTeamNameInput" maxlength="40" required
+              placeholder="e.g. The Pivoteers" autocomplete="username" data-sanitize="text">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="loginTeamPasswordInput">Team Password <span class="text-red">*</span></label>
+            <div class="input-pw-wrap">
+              <input class="form-input" type="password" id="loginTeamPasswordInput" required
+                placeholder="Your squad password" autocomplete="current-password">
+              <button type="button" class="pw-toggle" id="loginPwToggle" aria-label="Toggle visibility">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div id="loginFormError" class="form-error hidden" role="alert" aria-live="polite"></div>
+          <button class="btn btn-primary btn-full mag-btn btn-large-bold" type="submit" id="teamLoginSubmitBtn">
+            Re-enter the Arena
+          </button>
+          <p class="modal-switch">New squad? <button type="button" id="switchToRegister">Register here</button></p>
         </div>
       </form>
     </div>
@@ -938,22 +1007,34 @@
   function setupModals() {
     const open  = id => document.getElementById(id)?.classList.add('active');
     const close = id => document.getElementById(id)?.classList.remove('active');
-    document.getElementById('teamLoginBtn')?.addEventListener('click', () => open('teamModal'));
+    document.getElementById('teamRegisterBtn')?.addEventListener('click', () => open('teamModal'));
+    document.getElementById('teamLoginBtn')?.addEventListener('click', () => open('teamLoginModal'));
     document.getElementById('judgeLoginBtn')?.addEventListener('click', () => open('judgeModal'));
     document.getElementById('teamModalClose')?.addEventListener('click', () => close('teamModal'));
+    document.getElementById('teamLoginModalClose')?.addEventListener('click', () => close('teamLoginModal'));
     document.getElementById('judgeModalClose')?.addEventListener('click', () => close('judgeModal'));
-    ['teamModal','judgeModal'].forEach(id => {
+    document.getElementById('switchToLogin')?.addEventListener('click', () => { close('teamModal'); open('teamLoginModal'); });
+    document.getElementById('switchToRegister')?.addEventListener('click', () => { close('teamLoginModal'); open('teamModal'); });
+    ['teamModal','teamLoginModal','judgeModal'].forEach(id => {
       document.getElementById(id)?.addEventListener('click', e => { if (e.target.id === id) close(id); });
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') ['teamModal','teamLoginModal','judgeModal'].forEach(close);
     });
     document.getElementById('pwToggle')?.addEventListener('click', () => {
       const inp = document.getElementById('judgePassword');
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+    });
+    document.getElementById('loginPwToggle')?.addEventListener('click', () => {
+      const inp = document.getElementById('loginTeamPasswordInput');
       inp.type = inp.type === 'password' ? 'text' : 'password';
     });
   }
 
   /* ── Forms ── */
   function setupForms() {
-    document.getElementById('teamLoginForm')?.addEventListener('submit', async e => {
+    // Register: new squads only (startup name + category + tagline + password).
+    document.getElementById('teamRegisterForm')?.addEventListener('submit', async e => {
       e.preventDefault();
       const teamName    = sanitize(document.getElementById('teamNameInput')?.value || '');
       const startupName = sanitize(document.getElementById('startupNameInput')?.value || '');
@@ -966,19 +1047,43 @@
       if (startupName.length < 2)        { showErr(errEl, 'Startup name must be at least 2 characters.'); return; }
       if (!validCats.includes(category)) { showErr(errEl, 'Select a valid industry sector.'); return; }
 
-      const btn = document.getElementById('teamSubmitBtn');
+      const btn = document.getElementById('teamRegisterSubmitBtn');
       btn.disabled = true;
       btn.innerHTML = '<div class="spinner"></div> Entering arena…';
       await sleep(700);
       const password = document.getElementById('teamPasswordInput')?.value || '';
-      if (password.length < 8) { showErr(errEl, 'Team password must be at least 8 characters.'); btn.disabled = false; return; }
+      if (password.length < 8) { showErr(errEl, 'Team password must be at least 8 characters.'); btn.disabled = false; btn.innerHTML = 'Enter the Gauntlet'; return; }
       try {
-        await SS.loginTeam({ teamName, startupName, category, tagline, password });
+        await SS.registerTeam({ teamName, startupName, category, tagline, password });
         window.location.href = 'dashboard.html';
       } catch (error) {
         showErr(errEl, error.message);
         btn.disabled = false;
         btn.innerHTML = 'Enter the Gauntlet';
+      }
+    });
+
+    // Login: returning squads — team name + password only.
+    document.getElementById('teamLoginForm')?.addEventListener('submit', async e => {
+      e.preventDefault();
+      const teamName = sanitize(document.getElementById('loginTeamNameInput')?.value || '');
+      const password = document.getElementById('loginTeamPasswordInput')?.value || '';
+      const errEl    = document.getElementById('loginFormError');
+      const btn      = document.getElementById('teamLoginSubmitBtn');
+
+      if (teamName.length < 2) { showErr(errEl, 'Enter your squad / team name.'); return; }
+      if (!password)           { showErr(errEl, 'Enter your team password.'); return; }
+
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner"></div> Verifying…';
+      await sleep(450);
+      try {
+        await SS.loginTeam({ teamName, password });
+        window.location.href = 'dashboard.html';
+      } catch (error) {
+        showErr(errEl, error.message);
+        btn.disabled = false;
+        btn.innerHTML = 'Re-enter the Arena';
       }
     });
 
