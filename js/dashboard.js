@@ -357,12 +357,57 @@ function renderEventLog(state, ms, shocks) {
 }
 
 /* ── Controls ── */
+// Sliders/inputs hold a LOCAL DRAFT until Deploy is clicked — the server only
+// stores the last DEPLOYED strategy. _syncedStrategy remembers which server
+// values were last pushed into the DOM, and _editingControls tracks which
+// control the user is actively touching, so the 1.5s poller never yanks a
+// slider back mid-drag.
+let _syncedStrategy = null;
+const _editingControls = new Set();
+
+function trackControlEdits(el, id) {
+  if (!el) return;
+  el.addEventListener('pointerdown', () => _editingControls.add(id));
+  el.addEventListener('focus', () => _editingControls.add(id));
+  el.addEventListener('blur', () => _editingControls.delete(id));
+  el.addEventListener('change', () => _editingControls.delete(id));
+}
+
+// Releasing the pointer anywhere ends an active drag (covers pointerup
+// outside the element and touch cancel).
+window.addEventListener('pointerup', () => _editingControls.clear());
+window.addEventListener('pointercancel', () => _editingControls.clear());
+
+// Push a server value into the DOM only when the server value actually
+// changed since the last sync (initial load / post-deploy / external change)
+// and the user isn't actively touching that control. Otherwise the draft the
+// user is dialling in would snap back to the last deployed values on every
+// poll. When the user IS mid-edit we skip without recording, so the pending
+// server update is retried on the next poll after they let go.
+function syncControlFromServer(id, serverValue, apply) {
+  if (serverValue === undefined || serverValue === null) return;
+  if (typeof serverValue === 'number' && !Number.isFinite(serverValue)) return;
+  if (_editingControls.has(id)) return;
+  if (_syncedStrategy && _syncedStrategy[id] === serverValue) return;
+  apply(serverValue);
+  _syncedStrategy = { ...(_syncedStrategy || {}), [id]: serverValue };
+}
+
 function setupControls() {
   const priceSlider = document.getElementById('priceSlider');
   const priceInput  = document.getElementById('priceInput');
   const mktSlider   = document.getElementById('mktSlider');
   const mktInput    = document.getElementById('mktInput');
+  const segmentSel  = document.getElementById('segmentSelect');
   const deployBtn   = document.getElementById('deployBtn');
+
+  // Mark controls while the user is touching them so polled state can't
+  // overwrite the draft mid-drag / mid-type.
+  trackControlEdits(priceSlider, 'price');
+  trackControlEdits(priceInput, 'price');
+  trackControlEdits(mktSlider, 'mkt');
+  trackControlEdits(mktInput, 'mkt');
+  trackControlEdits(segmentSel, 'segment');
 
   if (priceSlider && priceInput) {
     priceSlider.addEventListener('input', () => {
@@ -439,6 +484,7 @@ function updateControlsFromState(ms, phase) {
   const priceInput  = document.getElementById('priceInput');
   const mktSlider   = document.getElementById('mktSlider');
   const mktInput    = document.getElementById('mktInput');
+  const segmentSel  = document.getElementById('segmentSelect');
   const deployBtn   = document.getElementById('deployBtn');
 
   if (deployBtn) {
@@ -450,18 +496,29 @@ function updateControlsFromState(ms, phase) {
   }
   if (!ms) return;
 
-  if (priceSlider && ms.productPrice) {
-    priceSlider.value = ms.productPrice;
-    if (priceInput) priceInput.value = ms.productPrice;
+  // Draft-preserving sync: only push a server value into the DOM when it
+  // actually changed (initial load / post-deploy) and the user isn't
+  // touching that control — otherwise every poll snaps the draft back to
+  // the last deployed values.
+  syncControlFromServer('price', Number(ms.productPrice), v => {
+    if (priceSlider) priceSlider.value = v;
+    if (priceInput) priceInput.value = v;
     const disp = document.getElementById('priceDisplay');
-    if (disp) disp.textContent = Fmt.currency(ms.productPrice);
-  }
-  if (mktSlider && ms.marketingSpend !== undefined) {
-    mktSlider.value = ms.marketingSpend;
-    if (mktInput) mktInput.value = ms.marketingSpend;
+    if (disp) disp.textContent = Fmt.currency(v);
+  });
+  syncControlFromServer('mkt', Number(ms.marketingSpend), v => {
+    if (mktSlider) mktSlider.value = v;
+    if (mktInput) mktInput.value = v;
     const disp = document.getElementById('mktDisplay');
-    if (disp) disp.textContent = Fmt.currency(ms.marketingSpend);
-  }
+    if (disp) disp.textContent = Fmt.currency(v);
+  });
+  syncControlFromServer('segment', ms.targetSegment, v => {
+    if (segmentSel && segmentSel.value !== v) {
+      segmentSel.value = v;
+      // Refresh the insight text via the existing change listener.
+      segmentSel.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
 }
 
 /* ── Phase indicator ── */
