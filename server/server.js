@@ -115,7 +115,12 @@ app.post('/api/shocks/custom', requireAuth, requireRole('judge'), async (req, re
 app.delete('/api/shocks/:instanceId', requireAuth, requireRole('judge'), async (req,res,next)=>{try{await pool.query('UPDATE shocks SET resolved=true WHERE instance_id=$1',[req.params.instanceId]); await pool.query('UPDATE shock_history SET resolved_at=NOW() WHERE instance_id=$1',[req.params.instanceId]); ok(res,null);}catch(e){next(e);}});
 
 app.use(express.static(frontend));
-app.get('*', (req,res,next) => req.path.startsWith('/api/') ? next() : res.sendFile(path.join(frontend,'index.html')));
+app.get('*', (req, res, next) => {
+  // Unknown /api/* paths must reach the API 404 below, not the SPA fallback.
+  if (req.path.startsWith('/api/')) return next('route');
+  res.sendFile(path.join(frontend, 'index.html'));
+});
+app.use('/api', (req, res) => fail(res, 404, 'NOT_FOUND', 'Unknown API route.'));
 app.use((err, req, res, next) => { console.error(err); if (!res.headersSent) fail(res,500,'INTERNAL_ERROR','An unexpected server error occurred.'); });
 const port = Number(process.env.PORT || 3000);
 // When run directly (`npm start` / `npm run dev`) this file boots a long-lived
