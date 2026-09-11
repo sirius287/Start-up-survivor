@@ -111,11 +111,11 @@ export default function Landing({ nav }) {
 
       <footer className="footer">
         <div className="footer-brand">STARTUP SURVIVOR <span className="footer-sep">//</span> V-LAUNCHPAD</div>
-        <nav className="footer-nav">
-          <button type="button" onClick={() => nav('/judge')}>judge door</button>
-          <span className="footer-sep">·</span>
-          <button type="button" onClick={() => nav('/gm')}>game master</button>
-        </nav>
+        <div className="footer-doors">
+          <span className="footer-doors-label">STAFF</span>
+          <button type="button" className="door-btn" onClick={() => nav('/judge')}>⚖ Judge Login</button>
+          <button type="button" className="door-btn" onClick={() => nav('/gm')}>🛡 Game Master</button>
+        </div>
         <div className="footer-credits">VIT-AP Entrepreneurship Club · IIEC &amp; VTBIF</div>
       </footer>
 
