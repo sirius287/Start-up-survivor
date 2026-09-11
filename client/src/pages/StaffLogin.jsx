@@ -3,11 +3,11 @@ import { api, getCurrentUser } from '../api.js';
 import { Password, Toasts } from '../components.jsx';
 import { useToasts } from '../hooks.js';
 
-/* Standalone login pages for staff, reachable only by direct link:
+/* Standalone login pages for staff:
      #/judge  — judges, by code
      #/gm     — Game Master / admin, by passphrase
-   Deliberately NOT linked from the landing page: participants never see a
-   door they can't open, and staff just bookmark their own URL. */
+   Linked from the landing-page footer; each door only opens with the right
+   credential. */
 export default function StaffLogin({ kind, nav }) {
   const isJudge = kind === 'judge';
   const { items, toast } = useToasts();

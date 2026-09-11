@@ -109,6 +109,14 @@ export default function Landing({ nav }) {
         </div>
       </div>
 
+      {/* Staff doors: judges, game master, and the event log. /#/logs is
+          staff-only — without a session the router bounces back here. */}
+      <div className="wrap" style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', paddingBottom: 22 }}>
+        <button className="btn btn-ghost" onClick={() => nav('/judge')}>⚖ Judge Login</button>
+        <button className="btn btn-ghost" onClick={() => nav('/gm')}>🛡 Game Master</button>
+        <button className="btn btn-ghost" onClick={() => nav('/logs')}>📜 Event Logs</button>
+      </div>
+
       <footer className="footer">
         <div><strong>V-TAPP Techfest</strong> // <strong>V-Launchpad</strong></div>
         <div style={{ opacity: 0.7, marginTop: 6 }}>VIT-AP Entrepreneurship Club · IIEC &amp; VTBIF</div>
