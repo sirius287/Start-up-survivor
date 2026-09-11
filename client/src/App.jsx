@@ -18,8 +18,8 @@ export default function App() {
   if (page === '/staff' && user?.role !== 'judge' && user?.role !== 'admin') page = '/';
   if (page === '/logs' && user?.role !== 'judge' && user?.role !== 'admin') page = '/';
 
-  // Staff doors are reachable from the landing-page footer; /#/logs still
-  // requires a staff session to open.
+  // /#/judge and /#/gm are linked from the landing footer; /#/logs stays a
+  // direct link only — it's empty until the event starts producing entries.
   if (page === '/judge') return <StaffLogin kind="judge" nav={nav} />;
   if (page === '/gm') return <StaffLogin kind="admin" nav={nav} />;
 
